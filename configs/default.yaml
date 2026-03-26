@@ -1,0 +1,24 @@
+count: 1
+templates:
+  - corporate_v1
+  - minimal_v1
+  - reference_v1
+base_url: https://example.com
+output_dir: output
+theme: default
+seed: null
+strict_components: false
+seo:
+  generate_sitemap: true
+  generate_robots: true
+noise:
+  extra_css_max: 2
+  extra_js_max: 2
+  junk_pages:
+    - privacy-policy
+    - terms-of-service
+    - cookie-policy
+integrations:
+  tracking_script_url: ""
+  offer_link: ""
+zip_each_site: false

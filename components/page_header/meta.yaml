@@ -1,0 +1,8 @@
+required_vars:
+  - brand_name
+  - about_page_header
+  - about_page_sub
+  - contact_page_header
+  - contact_page_sub
+variants:
+  - page_header_1.html

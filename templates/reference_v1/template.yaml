@@ -1,0 +1,35 @@
+id: reference_v1
+display_name: Reference (nav + corporate body)
+layout: layout.html
+page_extension: php
+pages:
+  index:
+    shuffle_allowed: true
+    slots:
+      - nav_bar
+      - hero
+      - about
+      - services
+      - contact_teaser
+      - footer
+  about:
+    shuffle_allowed: false
+    slots:
+      - nav_bar
+      - page_header
+      - about
+      - footer
+  contact:
+    shuffle_allowed: false
+    slots:
+      - nav_bar
+      - page_header
+      - contact_block
+      - footer
+  services:
+    shuffle_allowed: false
+    slots:
+      - nav_bar
+      - page_header
+      - services
+      - footer

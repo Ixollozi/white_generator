@@ -1,0 +1,31 @@
+id: corporate_v1
+display_name: Corporate v1
+layout: layout.html
+page_extension: php
+pages:
+  index:
+    shuffle_allowed: true
+    slots:
+      - hero
+      - about
+      - services
+      - contact_teaser
+      - footer
+  about:
+    shuffle_allowed: false
+    slots:
+      - page_header
+      - about
+      - footer
+  contact:
+    shuffle_allowed: false
+    slots:
+      - page_header
+      - contact_block
+      - footer
+  services:
+    shuffle_allowed: false
+    slots:
+      - page_header
+      - services
+      - footer

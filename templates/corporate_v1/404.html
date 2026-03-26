@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="{{ locale | default('en') }}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ legal_title }} — {{ brand_name }}</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="logo" href="index.php">{{ brand_name }}</a>
+    </div>
+  </header>
+  <main class="container legal">
+    <h1>{{ legal_title }}</h1>
+    <p>{{ legal_body }}</p>
+    <p><a href="index.php">Return home</a></p>
+  </main>
+</body>
+</html>

@@ -1,0 +1,23 @@
+id: minimal_v1
+display_name: Minimal v1
+layout: layout.html
+page_extension: php
+pages:
+  index:
+    shuffle_allowed: false
+    slots:
+      - hero
+      - services
+      - footer
+  contact:
+    shuffle_allowed: false
+    slots:
+      - page_header
+      - contact_block
+      - footer
+  services:
+    shuffle_allowed: false
+    slots:
+      - page_header
+      - services
+      - footer

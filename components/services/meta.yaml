@@ -1,0 +1,6 @@
+required_vars:
+  - services_heading
+  - services_intro
+  - service_items
+variants:
+  - services_1.html

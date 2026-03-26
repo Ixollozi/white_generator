@@ -1,0 +1,8 @@
+required_vars:
+  - brand_name
+  - email
+  - phone
+  - address
+variants:
+  - footer_1.html
+  - footer_2.html

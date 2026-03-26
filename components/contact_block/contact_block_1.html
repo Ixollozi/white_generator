@@ -1,0 +1,16 @@
+<section class="block contact">
+  <div class="container narrow">
+    <h2>Contact details</h2>
+    <ul class="contact-list">
+      <li><strong>Email:</strong> {{ email }}</li>
+      <li><strong>Phone:</strong> {{ phone }}</li>
+      <li><strong>Address:</strong> {{ address }}</li>
+    </ul>
+    <form class="contact-form" action="#" method="post">
+      <label>Name<input type="text" name="name" required></label>
+      <label>Email<input type="email" name="email" required></label>
+      <label>Message<textarea name="message" rows="4" required></textarea></label>
+      <button type="submit" class="btn">Send to {{ brand_name }}</button>
+    </form>
+  </div>
+</section>

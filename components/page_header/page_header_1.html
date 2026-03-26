@@ -1,0 +1,13 @@
+<section class="block page-header">
+  <div class="container narrow">
+    {% if page_key == 'about' %}
+    <h1>{{ about_page_header }}</h1>
+    <p class="lead">{{ about_page_sub }}</p>
+    {% elif page_key == 'contact' %}
+    <h1>{{ contact_page_header }}</h1>
+    <p class="lead">{{ contact_page_sub }}</p>
+    {% else %}
+    <h1>{{ brand_name }}</h1>
+    {% endif %}
+  </div>
+</section>

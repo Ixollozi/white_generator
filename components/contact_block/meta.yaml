@@ -1,0 +1,7 @@
+required_vars:
+  - email
+  - phone
+  - address
+  - brand_name
+variants:
+  - contact_block_1.html

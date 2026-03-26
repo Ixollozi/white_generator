@@ -1,0 +1,7 @@
+required_vars:
+  - brand_name
+  - hero_title
+  - hero_subtitle
+variants:
+  - hero_1.html
+  - hero_2.html

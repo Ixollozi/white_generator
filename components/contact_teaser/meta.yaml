@@ -1,0 +1,5 @@
+required_vars:
+  - contact_teaser
+  - brand_name
+variants:
+  - contact_teaser_1.html

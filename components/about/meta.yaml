@@ -1,0 +1,6 @@
+required_vars:
+  - about_heading
+  - about_body
+variants:
+  - about_1.html
+  - about_2.html

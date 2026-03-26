@@ -1,0 +1,17 @@
+.minimal-theme {
+  --accent: #0d9488;
+}
+.minimal-theme .wrap { max-width: 720px; margin: 0 auto; padding: 2rem; }
+.minimal-header {
+  background: #fff;
+  border-bottom: 1px solid #e5e7eb;
+}
+.minimal-header .header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+}
+.minimal-header .logo { font-weight: 800; text-decoration: none; color: inherit; }
+.minimal-header nav a { color: #0f766e; }

@@ -1,0 +1,14 @@
+<section class="block services">
+  <div class="container">
+    <h2>{{ services_heading }}</h2>
+    <p class="intro">{{ services_intro }}</p>
+    <div class="grid three">
+      {% for item in service_items %}
+      <article class="card">
+        <h3>{{ item.title }}</h3>
+        <p>{{ item.text }}</p>
+      </article>
+      {% endfor %}
+    </div>
+  </div>
+</section>

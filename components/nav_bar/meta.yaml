@@ -1,0 +1,4 @@
+required_vars:
+  - brand_name
+variants:
+  - nav_bar_1.html
