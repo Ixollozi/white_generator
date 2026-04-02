@@ -1,0 +1,12 @@
+testimonials_heading: Client feedback
+testimonial_items:
+  - quote: "They stayed through implementation — that made all the difference."
+    name: "Robert C."
+    role: "COO, mid-market manufacturer"
+  - quote: "The diagnostic sprint surfaced issues we'd been debating for months."
+    name: "Anna P."
+    role: "VP Operations"
+  - quote: "Practical recommendations. No fluff, no 200-slide decks."
+    name: "Michael T."
+    role: "Founder, SaaS company"
+services_seo_description: "{brand_name} delivers strategy, process optimization, and technology advisory for mid-market companies and growth-stage firms."

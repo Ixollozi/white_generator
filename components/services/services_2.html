@@ -1,0 +1,16 @@
+<section class="block services services-rows">
+  <div class="container">
+    <h2>{{ services_heading }}</h2>
+    <p class="intro">{{ services_intro }}</p>
+    <ul class="service-rows" style="list-style:none;padding:0;margin:0;">
+      {% for item in service_items %}
+      <li style="padding:1rem 0;border-bottom:1px solid #e5e7eb;">
+        <h3 style="margin:0 0 0.35rem;">{{ item.title }}</h3>
+        {% if item.price_from %}<p style="margin:0 0 0.35rem;font-weight:600;color:#0f172a;">{{ item.price_from }}</p>{% endif %}
+        <p style="margin:0;color:#4b5563;">{{ item.text }}</p>
+      </li>
+      {% endfor %}
+    </ul>
+    <p style="margin-top:1rem;"><a href="contact.{{ page_extension }}">Request details</a> · <a href="about.{{ page_extension }}">About</a></p>
+  </div>
+</section>

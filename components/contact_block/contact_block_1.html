@@ -1,16 +1,104 @@
 <section class="block contact">
   <div class="container narrow">
-    <h2>Contact details</h2>
-    <ul class="contact-list">
-      <li><strong>Email:</strong> {{ email }}</li>
-      <li><strong>Phone:</strong> {{ phone }}</li>
-      <li><strong>Address:</strong> {{ address }}</li>
-    </ul>
-    <form class="contact-form" action="#" method="post">
-      <label>Name<input type="text" name="name" required></label>
-      <label>Email<input type="email" name="email" required></label>
-      <label>Message<textarea name="message" rows="4" required></textarea></label>
-      <button type="submit" class="btn">Send to {{ brand_name }}</button>
+    <h2>Visit &amp; contact</h2>
+    <div class="contact-grid" style="display:grid;grid-template-columns:1fr;gap:1.5rem;">
+      <div>
+        <h3>Address</h3>
+        <address style="font-style:normal;line-height:1.6;">
+          {{ address_line1 }}<br>
+          {{ city_region_postal }}<br>
+          {{ country }}
+        </address>
+        {% if contact_districts_line %}
+        <p style="margin:0.75rem 0 0;font-size:0.9rem;color:#475569;line-height:1.5;">{{ contact_districts_line }}</p>
+        {% endif %}
+        <h3 style="margin-top:1rem;">Hours</h3>
+        <ul class="hours-list" style="margin:0;padding-left:1.1rem;line-height:1.6;">
+          <li><strong>Mon–Fri / core:</strong> {{ hours_weekday }}</li>
+          <li><strong>Weekend:</strong> {{ hours_weekend }}</li>
+          <li><strong>Holidays:</strong> {{ hours_holiday }}</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Direct</h3>
+        <ul class="contact-list" style="list-style:none;padding:0;margin:0;line-height:1.8;">
+          <li><strong>Email:</strong> <a href="mailto:{{ email }}">{{ email }}</a></li>
+          <li><strong>Phone:</strong> <a href="tel:{{ phone | replace(' ', '') }}">{{ phone }}</a></li>
+        </ul>
+        {% if maps_search_url %}
+        <p style="margin-top:1rem;"><a href="{{ maps_search_url }}" rel="noopener noreferrer">Directions in Google Maps</a></p>
+        {% endif %}
+      </div>
+    </div>
+    {% if maps_embed_url %}
+    <div class="map-embed" style="margin-top:1.25rem;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;">
+      <iframe title="{{ brand_name }} on Google Maps" src="{{ maps_embed_url }}" width="100%" height="320" style="border:0;" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+    </div>
+    {% endif %}
+    <h3 style="margin-top:1.5rem;">Get in touch</h3>
+    <p style="margin:0 0 0.75rem 0;">Send a short note and we’ll reply within one business day.</p>
+    <form class="contact-lead-form" action="/forms/message" method="post" style="display:grid;gap:0.6rem;max-width:42rem;">
+      <input type="text" name="website" autocomplete="off" class="sr-only" aria-hidden="true">
+      <input type="hidden" name="page" value="">
+      <div style="display:grid;grid-template-columns:1fr;gap:0.6rem;">
+        <label>
+          <span style="display:block;font-size:0.875rem;color:#334155;margin-bottom:0.25rem;">Your name (optional)</span>
+          <input type="text" name="name" autocomplete="name" placeholder="Name" style="width:100%;padding:0.5rem 0.65rem;">
+        </label>
+        <div style="display:grid;grid-template-columns:1fr;gap:0.6rem;">
+          <label>
+            <span style="display:block;font-size:0.875rem;color:#334155;margin-bottom:0.25rem;">Email</span>
+            <input type="email" name="email" autocomplete="email" placeholder="you@company.com" style="width:100%;padding:0.5rem 0.65rem;" required>
+          </label>
+          <label>
+            <span style="display:block;font-size:0.875rem;color:#334155;margin-bottom:0.25rem;">Phone (optional)</span>
+            <input type="tel" name="phone" autocomplete="tel" placeholder="{{ phone }}" style="width:100%;padding:0.5rem 0.65rem;">
+          </label>
+        </div>
+        <label>
+          <span style="display:block;font-size:0.875rem;color:#334155;margin-bottom:0.25rem;">Message</span>
+          <textarea name="message" rows="5" placeholder="{{ contact_form_placeholder | default('Tell us what you need and the best time to connect.') }}" style="width:100%;padding:0.5rem 0.65rem;resize:vertical;" required></textarea>
+        </label>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:0.6rem;align-items:center;">
+        <button type="submit" class="btn">Send message</button>
+        <a class="btn" href="mailto:{{ email }}">Email instead</a>
+        <button type="button" class="btn" onclick="(function(){try{navigator.clipboard.writeText('{{ email }}');}catch(e){window.prompt('Copy email:', '{{ email }}')}})();" style="margin-left:0.0rem;">Copy email</button>
+      </div>
+      <p class="contact-lead-msg" style="font-size:0.875rem;color:#64748b;margin:0.25rem 0 0;"></p>
     </form>
+    <p class="contact-form-note" style="font-size:0.875rem;color:#64748b;margin-top:0.65rem;max-width:42rem;line-height:1.5;">We typically reply within 1 business day. You can also call {{ phone }} during listed hours.</p>
   </div>
 </section>
+
+<script>
+(function(){
+  var form = document.querySelector('.contact-lead-form');
+  if(!form) return;
+  var msg = form.querySelector('.contact-lead-msg');
+  var page = form.querySelector('input[name=\"page\"]');
+  if(page && !page.value) { try{ page.value = window.location && window.location.pathname ? window.location.pathname : ''; }catch(e){} }
+  form.addEventListener('submit', async function(ev){
+    try{
+      ev.preventDefault();
+      if(msg) msg.textContent = 'Sending…';
+      var fd = new FormData(form);
+      var payload = Object.fromEntries(fd.entries());
+      var res = await fetch(form.getAttribute('action') || '/forms/message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if(!res.ok){
+        if(msg) msg.textContent = 'Could not send. Please try again or email us directly.';
+        return;
+      }
+      form.reset();
+      if(page) { try{ page.value = window.location && window.location.pathname ? window.location.pathname : ''; }catch(e){} }
+      if(msg) msg.textContent = 'Message sent. We’ll reply within 1 business day.';
+    }catch(e){
+      if(msg) msg.textContent = 'Could not send. Please try again or email us directly.';
+    }
+  }, { passive: false });
+})();
+</script>

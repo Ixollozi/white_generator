@@ -1,0 +1,20 @@
+<section class="block team-strip">
+  <div class="container">
+    <h2>{{ team_heading }}</h2>
+    <div class="grid three">
+      {% for m in team_items %}
+      <div class="card team-card">
+        {% if m.photo_src %}
+        <img src="{{ m.photo_src }}" alt="{{ m.name }}, {{ m.role }}" width="400" height="400" loading="lazy" decoding="async" style="display:block;width:100%;max-width:220px;margin:0 auto 0.75rem;border-radius:50%;aspect-ratio:1;object-fit:cover;">
+        {% endif %}
+        <p class="team-name"><strong>{{ m.name }}</strong></p>
+        <p class="team-role">{{ m.role }}</p>
+        {% if m.bio %}
+        <p class="team-bio" style="margin:0.35rem 0 0;font-size:0.9rem;color:#475569;line-height:1.45;">{{ m.bio }}</p>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    <p class="intro" style="margin-top:1rem;"><a href="about.{{ page_extension }}">Our story</a> · <a href="contact.{{ page_extension }}">Contact</a></p>
+  </div>
+</section>

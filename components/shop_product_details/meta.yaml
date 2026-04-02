@@ -1,0 +1,6 @@
+id: shop_product_details
+display_name: Shop product details (single-page catalog)
+required_vars:
+  - products
+variants:
+  - file: shop_product_details_1.html

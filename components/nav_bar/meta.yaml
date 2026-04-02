@@ -1,4 +1,8 @@
+slot: nav_bar
 required_vars:
   - brand_name
+  - nav_items
+  - page_extension
 variants:
   - nav_bar_1.html
+  - nav_bar_2.html

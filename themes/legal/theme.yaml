@@ -1,0 +1,22 @@
+inject_before: contact_teaser
+index_extras:
+  - testimonials
+nav_items:
+  - { href: index.php, label: Home }
+  - { href: about.php, label: The firm }
+  - { href: services.php, label: Practice areas }
+  - { href: contact.php, label: Consultation }
+brand_prefixes:
+  - Clarke
+  - Murray
+  - Graham
+  - Sterling
+  - Meridian
+  - Harbour
+brand_suffixes:
+  - Law
+  - Legal
+  - Law Group
+  - Attorneys
+  - Law Firm
+  - "& Associates"

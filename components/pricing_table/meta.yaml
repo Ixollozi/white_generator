@@ -1,0 +1,9 @@
+slot: pricing_table
+required_vars:
+  - page_extension
+  - pricing_page_header
+  - pricing_page_intro
+  - pricing_tiers
+variants:
+  - pricing_table_1.html
+  - pricing_table_2.html

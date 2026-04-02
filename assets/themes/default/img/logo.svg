@@ -1,4 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Logo">
-  <rect width="64" height="64" rx="12" fill="#1e3a8a"/>
-  <path fill="#fff" d="M18 44V20h8l8 14 8-14h8v24h-8V32l-8 14-8-14v12z"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 48" role="img" aria-label="Logo">
+  <rect x="1" y="1" width="46" height="46" rx="10" fill="#1e3a8a"/>
+  <path fill="#fff" d="M13 34V14h6l6 10.5L31 14h6v20h-6V24l-6 10.5L19 24v10z"/>
+  <text x="58" y="22" font-size="15" fill="#1e3a8a" font-family="system-ui,sans-serif" font-weight="700">Brand</text>
+  <text x="58" y="38" font-size="11" fill="#64748b" font-family="system-ui,sans-serif">brandname.com</text>
 </svg>

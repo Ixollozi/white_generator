@@ -1,0 +1,12 @@
+testimonials_heading: Client experiences
+testimonial_items:
+  - quote: "They knew the neighborhood pricing better than any other agent we met."
+    name: "Emily & James T."
+    role: "First-time buyers"
+  - quote: "Our home sold in two weeks at asking price. The staging advice was spot-on."
+    name: "Robert M."
+    role: "Seller"
+  - quote: "Patient, knowledgeable, and never pushy. Exactly what we needed."
+    name: "Priya S."
+    role: "Buyer"
+services_seo_description: "{brand_name} provides buyer and seller representation, market analysis, and rental placement with deep local knowledge."

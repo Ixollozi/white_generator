@@ -1,0 +1,27 @@
+<section class="block about about--timeline">
+  <div class="container narrow">
+    <h2>{{ about_heading }}</h2>
+    <p>{{ about_body }}</p>
+    {% if mission_statement %}
+    <h3 style="margin-top:1.5rem;">Mission</h3>
+    <p>{{ mission_statement }}</p>
+    {% endif %}
+    {% if core_values %}
+    <h3>Values</h3>
+    <ul>
+      {% for v in core_values %}<li>{{ v }}</li>{% endfor %}
+    </ul>
+    {% endif %}
+    {% if about_timeline %}
+    <h3>Timeline</h3>
+    <ul style="list-style:none;padding:0;">
+      {% for ev in about_timeline %}
+      <li style="margin-bottom:0.75rem;padding-left:1rem;border-left:3px solid #cbd5e1;">
+        <strong>{{ ev.year }}</strong> — {{ ev.label }}
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+    <p style="margin-top:1.25rem;"><a href="services.{{ page_extension }}">{{ about_services_short_label }}</a></p>
+  </div>
+</section>

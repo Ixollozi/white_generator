@@ -1,0 +1,27 @@
+<section class="block pricing-block pricing-block--table">
+  <div class="container">
+    <h2>{{ pricing_page_header }}</h2>
+    <p class="intro">{{ pricing_page_intro }}</p>
+    <div style="overflow-x:auto;margin-top:1rem;">
+      <table style="width:100%;border-collapse:collapse;font-size:0.95rem;">
+        <thead>
+          <tr style="background:#f8fafc;border-bottom:2px solid #e2e8f0;">
+            <th style="text-align:left;padding:0.65rem;">Plan</th>
+            <th style="text-align:left;padding:0.65rem;">From</th>
+            <th style="text-align:left;padding:0.65rem;">Includes</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for tier in pricing_tiers %}
+          <tr style="border-bottom:1px solid #e5e7eb;">
+            <td style="padding:0.65rem;vertical-align:top;font-weight:600;">{{ tier.name }}</td>
+            <td style="padding:0.65rem;vertical-align:top;">{{ tier.price_hint }}</td>
+            <td style="padding:0.65rem;vertical-align:top;color:#334155;">{{ tier.features | join(' · ') }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p style="margin-top:1rem;"><a href="contact.{{ page_extension }}">Custom scope?</a> We’ll align on site access and timing.</p>
+  </div>
+</section>

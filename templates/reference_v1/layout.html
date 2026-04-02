@@ -5,12 +5,76 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{ page_title }}</title>
   <meta name="description" content="{{ page_description }}">
+  {% if page_canonical %}
+  <link rel="canonical" href="{{ page_canonical }}">
+  {% endif %}
+  <meta property="og:type" content="{{ page_og_type | default('website') }}">
+  <meta property="og:title" content="{{ page_title }}">
+  <meta property="og:description" content="{{ page_description }}">
+  {% if page_canonical %}
+  <meta property="og:url" content="{{ page_canonical }}">
+  {% endif %}
+  {% if site_base_url and og_image_src %}
+  <meta property="og:image" content="{{ site_base_url }}/{{ og_image_src }}">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  {% endif %}
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{{ page_title }}">
+  <meta name="twitter:description" content="{{ page_description }}">
+  {% if site_base_url and og_image_src %}
+  <meta name="twitter:image" content="{{ site_base_url }}/{{ og_image_src }}">
+  {% endif %}
+  {% if json_ld_organization %}
+  <script type="application/ld+json">{{ json_ld_organization | safe }}</script>
+  {% endif %}
+  {% if json_ld_news_article %}
+  <script type="application/ld+json">{{ json_ld_news_article | safe }}</script>
+  {% endif %}
+  {% if json_ld_blog_post %}
+  <script type="application/ld+json">{{ json_ld_blog_post | safe }}</script>
+  {% endif %}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="{{ google_fonts_stylesheet_url }}" rel="stylesheet">
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+  <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="site.webmanifest">
   <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/core.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/vendor.css">
   <link rel="stylesheet" href="css/reference.css">
+  <style>
+    body { font-family: {{ body_font_family | safe }}; }
+    h1, h2, h3, h4, h5, h6 { font-family: {{ heading_font_family | safe }}; }
+  </style>
 </head>
-<body class="reference-site">
+<body class="reference-site{% if body_extra_class %} {{ body_extra_class }}{% endif %}">
+  {% if promo_banner_text %}
+  <div class="promo-banner" role="region" aria-label="Promotion" style="background:#111827;color:#f9fafb;text-align:center;padding:0.4rem 0.75rem;font-size:0.9rem;">
+    {{ promo_banner_text }}
+  </div>
+  {% endif %}
   {{ integrations.tracking_html | safe }}
   <main class="site-main">
+    <div class="container nav-row" style="padding:0.5rem 0;display:flex;flex-wrap:wrap;align-items:center;gap:0.5rem;justify-content:space-between;">
+      <a class="logo" href="{% if page_extension == 'php' %}index.php{% else %}index.{{ page_extension }}{% endif %}">{% if logo_src %}<img src="{{ logo_src }}" alt="{{ brand_name }}" width="150" height="36" decoding="async">{% else %}{{ brand_name }}{% endif %}</a>
+      <nav style="display:flex;flex-wrap:wrap;gap:0.35rem 0.65rem;">
+        {% for link in nav_items %}
+        <a href="{{ link.href }}">{{ link.label }}</a>
+        {% endfor %}
+      </nav>
+    </div>
+    {% if breadcrumbs and breadcrumbs|length > 1 %}
+    <nav class="container breadcrumbs" aria-label="Breadcrumb" style="padding:0 1rem 0.5rem;font-size:0.9rem;color:#475569;">
+      {% for c in breadcrumbs %}
+        {% if not loop.first %}<span aria-hidden="true"> &gt; </span>{% endif %}
+        {% if c.href %}<a href="{{ c.href }}">{{ c.label }}</a>{% else %}<span aria-current="page">{{ c.label }}</span>{% endif %}
+      {% endfor %}
+    </nav>
+    {% endif %}
     {{ body_html | safe }}
     {% set img_items = images.get('items', []) if images else [] %}
     {% if img_items %}
@@ -27,5 +91,13 @@
     </section>
     {% endif %}
   </main>
+  <div id="cookie-consent" class="cookie-bar" role="dialog" aria-label="Cookie notice" style="position:fixed;left:0;right:0;bottom:0;z-index:50;background:#0f172a;color:#f8fafc;padding:0.75rem 1rem;font-size:0.9rem;display:flex;flex-wrap:wrap;gap:0.75rem;align-items:center;justify-content:center;">
+    <span>We use essential cookies to run this site. Read our <a href="{% if page_extension == 'php' %}cookie-policy.php{% else %}cookie-policy.{{ page_extension }}{% endif %}" style="color:#93c5fd;">Cookie Policy</a>.</span>
+    <button type="button" id="cookie-ok" style="background:#2563eb;color:#fff;border:0;border-radius:8px;padding:0.35rem 0.85rem;cursor:pointer;">OK</button>
+  </div>
+  <script>
+  (function(){var k='cookie_consent_v1';try{if(localStorage.getItem(k))document.getElementById('cookie-consent').style.display='none';}catch(e){}
+  var b=document.getElementById('cookie-ok');if(b)b.addEventListener('click',function(){try{localStorage.setItem(k,'1');}catch(e){}var bar=document.getElementById('cookie-consent');if(bar)bar.style.display='none';});})();
+  </script>
 </body>
 </html>

@@ -1,0 +1,12 @@
+testimonials_heading: Client testimonials
+testimonial_items:
+  - quote: "They explained the contract risks in terms I could actually act on."
+    name: "Sarah W."
+    role: "Business owner"
+  - quote: "Responsive, clear billing, and they set expectations from the start."
+    name: "David M."
+    role: "Startup founder"
+  - quote: "Settled a dispute that had been dragging for months. Worth every dollar."
+    name: "Maria G."
+    role: "Commercial client"
+services_seo_description: "{brand_name} provides business law, contract drafting, dispute resolution, and compliance guidance with transparent billing and clear communication."

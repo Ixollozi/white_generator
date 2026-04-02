@@ -5,15 +5,17 @@ import logging
 import re
 import shutil
 import secrets
+import time
 from pathlib import Path
 
 import yaml
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from core.exporter import zip_site_folder
+from generators.content_generator import load_verticals
 
 from server.jobs import store
 from server.paths import default_output_path, project_root, site_dir_for_name, validate_site_folder_name
@@ -25,9 +27,48 @@ from server.schemas import (
     GenerateRequest,
     JobCreated,
     JobStatusResponse,
+    ContactLeadIn,
+    NewsletterLeadIn,
+    OrderLeadIn,
+    LeadAccepted,
     SiteSummary,
     TemplateInfo,
+    VerticalInfo,
 )
+
+_RATE_BUCKET: dict[str, list[float]] = {}
+
+
+def _client_ip(req: Request) -> str:
+    return req.client.host if req.client else "unknown"
+
+
+def _rate_limit_ok(key: str, *, window_s: int = 60, limit: int = 12) -> bool:
+    now = time.time()
+    bucket = _RATE_BUCKET.setdefault(key, [])
+    cutoff = now - float(window_s)
+    i = 0
+    while i < len(bucket) and bucket[i] < cutoff:
+        i += 1
+    if i:
+        del bucket[:i]
+    if len(bucket) >= limit:
+        return False
+    bucket.append(now)
+    return True
+
+
+def _leads_path() -> Path:
+    base = default_output_path()
+    base.mkdir(parents=True, exist_ok=True)
+    return base / "_leads.jsonl"
+
+
+def _append_jsonl(path: Path, payload: dict) -> None:
+    line = json.dumps(payload, ensure_ascii=False)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8") as f:
+        f.write(line + "\n")
 
 logger = logging.getLogger("white_generator.server")
 if not logging.getLogger().handlers:
@@ -89,6 +130,132 @@ def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
+async def _read_body_as_dict(req: Request) -> dict:
+    ctype = (req.headers.get("content-type") or "").lower()
+    if "application/json" in ctype:
+        try:
+            data = await req.json()
+        except Exception:
+            return {}
+        return data if isinstance(data, dict) else {}
+    # default to form
+    try:
+        form = await req.form()
+    except Exception:
+        return {}
+    return {k: str(v) for k, v in dict(form).items()}
+
+
+@app.post("/forms/message", response_model=LeadAccepted)
+@app.post("/api/leads/contact", response_model=LeadAccepted, include_in_schema=False)
+async def create_contact_lead(req: Request) -> LeadAccepted:
+    ip = _client_ip(req)
+    if not _rate_limit_ok(f"contact:{ip}", window_s=60, limit=10):
+        raise HTTPException(status_code=429, detail="Too many requests")
+    raw = await _read_body_as_dict(req)
+    body = ContactLeadIn.model_validate(raw)
+    if (body.website or "").strip():
+        raise HTTPException(status_code=400, detail="Invalid submission")
+    msg = (body.message or "").strip()
+    if not msg or len(msg) < 10:
+        raise HTTPException(status_code=400, detail="Message too short")
+    lead_id = secrets.token_hex(8)
+    payload = {
+        "type": "contact",
+        "lead_id": lead_id,
+        "ts": int(time.time()),
+        "ip": ip,
+        "email": (body.email or "").strip(),
+        "phone": (body.phone or "").strip(),
+        "name": (body.name or "").strip(),
+        "message": msg,
+        "page": (body.page or "").strip(),
+    }
+    _append_jsonl(_leads_path(), payload)
+    return LeadAccepted(lead_id=lead_id)
+
+
+@app.post("/forms/subscribe", response_model=LeadAccepted)
+@app.post("/api/leads/newsletter", response_model=LeadAccepted, include_in_schema=False)
+async def create_newsletter_lead(req: Request) -> LeadAccepted:
+    ip = _client_ip(req)
+    if not _rate_limit_ok(f"newsletter:{ip}", window_s=60, limit=15):
+        raise HTTPException(status_code=429, detail="Too many requests")
+    raw = await _read_body_as_dict(req)
+    body = NewsletterLeadIn.model_validate(raw)
+    if (body.website or "").strip():
+        raise HTTPException(status_code=400, detail="Invalid submission")
+    email = (body.email or "").strip()
+    if "@" not in email or len(email) > 254:
+        raise HTTPException(status_code=400, detail="Invalid email")
+    lead_id = secrets.token_hex(8)
+    payload = {
+        "type": "newsletter",
+        "lead_id": lead_id,
+        "ts": int(time.time()),
+        "ip": ip,
+        "email": email,
+        "page": (body.page or "").strip(),
+    }
+    _append_jsonl(_leads_path(), payload)
+    return LeadAccepted(lead_id=lead_id)
+
+
+@app.post("/forms/order", response_model=LeadAccepted)
+@app.post("/api/leads/order", response_model=LeadAccepted, include_in_schema=False)
+async def create_order_lead(req: Request) -> LeadAccepted:
+    ip = _client_ip(req)
+    if not _rate_limit_ok(f"order:{ip}", window_s=60, limit=8):
+        raise HTTPException(status_code=429, detail="Too many requests")
+    raw = await _read_body_as_dict(req)
+    body = OrderLeadIn.model_validate(raw)
+    if (body.website or "").strip():
+        raise HTTPException(status_code=400, detail="Invalid submission")
+    email = (body.email or "").strip()
+    if "@" not in email or len(email) > 254:
+        raise HTTPException(status_code=400, detail="Invalid email")
+    lead_id = secrets.token_hex(8)
+    payload = {
+        "type": "order",
+        "lead_id": lead_id,
+        "ts": int(time.time()),
+        "ip": ip,
+        "email": email,
+        "name": (body.name or "").strip(),
+        "address": (body.address or "").strip(),
+        "city": (body.city or "").strip(),
+        "postal": (body.postal or "").strip(),
+        "notes": (body.notes or "").strip(),
+        "cart": body.cart or [],
+        "page": (body.page or "").strip(),
+    }
+    _append_jsonl(_leads_path(), payload)
+    return LeadAccepted(lead_id=lead_id)
+
+
+@app.post("/collect")
+@app.post("/api/track", include_in_schema=False)
+async def track_event(req: Request) -> dict[str, bool]:
+    ip = _client_ip(req)
+    if not _rate_limit_ok(f"track:{ip}", window_s=60, limit=120):
+        raise HTTPException(status_code=429, detail="Too many requests")
+    raw = await _read_body_as_dict(req)
+    ev = str(raw.get("event") or "").strip()[:64]
+    if not ev:
+        raise HTTPException(status_code=400, detail="Invalid event")
+    payload = {
+        "type": "track",
+        "ts": int(time.time()),
+        "ip": ip,
+        "event": ev,
+        "path": str(raw.get("path") or "")[:240],
+        "ref": str(raw.get("ref") or "")[:240],
+        "ua": str(raw.get("ua") or "")[:240],
+    }
+    _append_jsonl(_leads_path(), payload)
+    return {"ok": True}
+
+
 @app.get("/api/templates", response_model=list[TemplateInfo])
 def list_templates() -> list[TemplateInfo]:
     root = _templates_dir()
@@ -112,6 +279,27 @@ def list_templates() -> list[TemplateInfo]:
                 pass
         out.append(TemplateInfo(folder=child.name, id=str(tid) if tid else None, display_name=str(dname) if dname else None))
     logger.info("list_templates: found=%s", len(out))
+    return out
+
+
+@app.get("/api/verticals", response_model=list[VerticalInfo])
+def list_verticals() -> list[VerticalInfo]:
+    root = project_root()
+    vs = load_verticals(root / "data")
+    out: list[VerticalInfo] = []
+    for v in vs:
+        vid = str(v.get("id") or "").strip()
+        if not vid:
+            continue
+        hint_raw = v.get("hint")
+        hint = str(hint_raw) if hint_raw else None
+        out.append(
+            VerticalInfo(
+                id=vid,
+                label_ru=str(v.get("label_ru") or vid),
+                hint=hint,
+            )
+        )
     return out
 
 
@@ -144,6 +332,11 @@ def _request_to_overrides(body: GenerateRequest) -> dict:
 def start_generate(body: GenerateRequest) -> JobCreated:
     if not body.templates:
         raise HTTPException(status_code=400, detail="Select at least one template")
+    if body.vertical is not None and str(body.vertical).strip():
+        vid = str(body.vertical).strip()
+        valid = {str(v["id"]) for v in load_verticals(project_root() / "data")}
+        if vid not in valid:
+            raise HTTPException(status_code=400, detail=f"Unknown vertical: {vid}")
     job = store.create()
     payload = _request_to_overrides(body)
     logger.info(
@@ -293,6 +486,25 @@ def _output_base() -> Path:
     return default_output_path()
 
 
+def _brand_guess_from_index(folder: Path) -> str | None:
+    """When build-manifest.json is absent, infer a label from <title> for the UI list."""
+    for name in ("index.php", "index.html"):
+        p = folder / name
+        if not p.is_file():
+            continue
+        txt = p.read_text(encoding="utf-8", errors="ignore")
+        m = re.search(r"<title>\s*([^<]+)", txt, flags=re.IGNORECASE)
+        if not m:
+            continue
+        title = (m.group(1) or "").strip()
+        if not title:
+            continue
+        parts = re.split(r"\s*[|\u2013\u2014\-]\s*", title, maxsplit=1)
+        guess = (parts[0] or "").strip()
+        return guess or None
+    return None
+
+
 def _resolve_site_file(site_name: str, file_path: str) -> Path:
     try:
         validate_site_folder_name(site_name)
@@ -347,6 +559,8 @@ def list_sites() -> list[SiteSummary]:
         template_id = None
         brand_name = None
         build_id = None
+        vertical_id = None
+        theme_pack_folder = None
         if manifest_path.is_file():
             try:
                 data = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -354,8 +568,26 @@ def list_sites() -> list[SiteSummary]:
                     template_id = data.get("template_id")
                     brand_name = data.get("brand_name")
                     build_id = data.get("build_id")
+                    vertical_id = data.get("vertical_id")
+                    theme_pack_folder = data.get("theme_pack_folder")
             except (OSError, json.JSONDecodeError):
                 pass
+        ui_path = child / ".ui-site-meta.json"
+        if ui_path.is_file():
+            try:
+                u = json.loads(ui_path.read_text(encoding="utf-8"))
+                if isinstance(u, dict):
+                    template_id = template_id or u.get("template_id")
+                    brand_name = brand_name or u.get("brand_name")
+                    build_id = build_id or u.get("build_id")
+                    vertical_id = vertical_id or u.get("vertical_id")
+                    theme_pack_folder = theme_pack_folder or u.get("theme_pack_folder")
+            except (OSError, json.JSONDecodeError):
+                pass
+        if not brand_name:
+            bg = _brand_guess_from_index(child)
+            if bg:
+                brand_name = bg
         zip_path = child.with_suffix(".zip")
         items.append(
             SiteSummary(
@@ -364,6 +596,8 @@ def list_sites() -> list[SiteSummary]:
                 template_id=str(template_id) if template_id else None,
                 brand_name=str(brand_name) if brand_name else None,
                 build_id=str(build_id) if build_id else None,
+                vertical_id=str(vertical_id) if vertical_id else None,
+                theme_pack_folder=str(theme_pack_folder) if theme_pack_folder else None,
                 has_zip=zip_path.is_file(),
             )
         )

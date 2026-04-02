@@ -1,6 +1,12 @@
+slot: about
 required_vars:
+  - brand_name
   - about_heading
   - about_body
+  - page_extension
+  - about_services_short_label
 variants:
   - about_1.html
   - about_2.html
+  - about_3.html
+  - about_4.html

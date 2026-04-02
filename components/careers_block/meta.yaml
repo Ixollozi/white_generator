@@ -1,0 +1,8 @@
+slot: careers_block
+required_vars:
+  - page_extension
+  - careers_page_header
+  - careers_page_intro
+  - careers_openings
+variants:
+  - careers_1.html

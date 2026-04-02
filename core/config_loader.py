@@ -12,6 +12,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "base_url": "https://example.com",
     "output_dir": "output",
     "site_name": None,
+    "vertical": None,
     "theme": "default",
     "seed": None,
     "strict_components": False,
@@ -28,13 +29,21 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "noise": {
         "extra_css_max": 3,
         "extra_js_max": 3,
-        "junk_pages": ["privacy-policy", "terms-of-service", "cookie-policy"],
+        "junk_pages": [
+            "privacy-policy",
+            "terms-of-service",
+            "cookie-policy",
+            "refund-policy",
+            "shipping-policy",
+        ],
         "attach_assets": False,
         "randomize_classes": False,
         "randomize_ids": False,
+        "id_safelist": ["cookie-consent", "cookie-ok"],
     },
     "images": {
         "mode": "none",  # none|web|upload
+        "image_source": None,  # unset + mode none → placeholder (local); web → picsum; upload+pack → pack
         "web_sources": [],
         "asset_pack_id": None,
         "count": 3,
@@ -42,7 +51,12 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "integrations": {
         "offer_link": "",
     },
+    "legal": {
+        "mode": "production",  # draft|production
+    },
     "zip_each_site": False,
+    # When False (default), build-manifest.json is not written into the site folder (safer for public deploy).
+    "write_build_manifest": False,
 }
 
 

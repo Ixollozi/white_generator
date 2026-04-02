@@ -1,0 +1,20 @@
+testimonials_heading: What patients say
+testimonial_items:
+  - quote: "They explained every step of the crown prep — I could see the images on screen."
+    name: "Rachel M."
+    role: "Patient since {member_since_year}"
+  - quote: "My kids actually don't mind going to the dentist here."
+    name: "David T."
+    role: "Family patient"
+  - quote: "Honest about what I needed now vs. what could wait. No pressure."
+    name: "Alicia W."
+    role: "New patient"
+faq_heading: Patient questions
+faq_items:
+  - q: "Do you accept my insurance?"
+    a: "We work with most major dental plans and will verify your coverage before treatment begins."
+  - q: "What if I have dental anxiety?"
+    a: "We offer sedation options and take extra time to explain procedures so you feel in control."
+  - q: "How often should I schedule a cleaning?"
+    a: "Most adults benefit from every six months, but we'll recommend a schedule based on your oral health."
+services_seo_description: "{brand_name} provides general, cosmetic, and preventive dental care with upfront pricing, modern equipment, and a patient-first approach."

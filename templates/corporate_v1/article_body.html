@@ -1,0 +1,61 @@
+<article class="container narrow long-form" itemscope itemtype="https://schema.org/NewsArticle">
+  <header class="article-head">
+    <p class="meta art-meta">
+      <span class="pill">{{ post.category }}</span>
+      {% if post.article_kind %}· <span class="article-kind">{{ post.article_kind | capitalize }}</span>{% endif %}
+      ·
+      <time itemprop="datePublished" datetime="{{ post.date_iso }}">{{ post.date }}</time>
+      ·
+      <span itemprop="author" itemscope itemtype="https://schema.org/Person"><span itemprop="name">{{ post.author_name }}</span></span>
+      {% if post.read_minutes %}· <span class="read-time">{{ post.read_minutes }} min read</span>{% endif %}
+      {% if post.view_count is defined %}· <span class="view-count">{{ post.view_count }} views</span>{% endif %}
+    </p>
+    <h1 itemprop="headline">{{ post.title }}</h1>
+    <p class="dek" itemprop="description">{{ post.dek }}</p>
+    {% if post.tags %}
+    <p class="tag-row" aria-label="Tags">
+      {% for tag in post.tags %}<span class="pill tag-pill">{{ tag }}</span>{% endfor %}
+    </p>
+    {% endif %}
+  </header>
+  {% if post.post_image_src %}
+  <figure class="art-hero-fig">
+    <img src="{{ post.post_image_src }}" alt="{{ post.image_alt | default('', true) | e }}" width="1200" height="675" loading="eager" decoding="async" fetchpriority="high">
+  </figure>
+  {% endif %}
+  <div class="article-body" itemprop="articleBody">
+    {% for sec in post.article_sections_html %}
+      {% if sec.heading %}<h2>{{ sec.heading }}</h2>{% endif %}
+      {% for ph in sec.paragraphs_html %}{{ ph | safe }}{% endfor %}
+    {% endfor %}
+  </div>
+  {% if post.related_posts %}
+  <section class="related-block" aria-labelledby="rel-h">
+    <h2 id="rel-h">Related coverage</h2>
+    <ul class="related-list">
+      {% for rp in post.related_posts %}
+      <li><a href="article-{{ rp.anchor }}.{{ page_extension }}">{{ rp.title }}</a>{% if rp.category %} <span class="pill">{{ rp.category }}</span>{% endif %}</li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+  <section class="sources-block" aria-labelledby="src-h">
+    <h2 id="src-h">Sources</h2>
+    <ul class="sources-list">
+      {% for s in post.sources %}
+      <li><a href="{{ s.url }}" rel="noopener noreferrer" target="_blank">{{ s.title }}</a> — {{ s.org }}</li>
+      {% endfor %}
+    </ul>
+  </section>
+  <section class="comments-block" aria-labelledby="com-h">
+    <h2 id="com-h">Reader comments</h2>
+    {% for c in post.comments %}
+    <blockquote class="reader-comment">
+      <p>{{ c.text }}</p>
+      <footer>— {{ c.author }}, <span>{{ c.date_ago }}</span></footer>
+    </blockquote>
+    {% endfor %}
+    <p class="fine-print">Comments are moderated for abuse and spam. Publication standards still apply.</p>
+  </section>
+  <p class="back-row"><a href="blog.{{ page_extension }}">← All coverage</a> · <a href="authors.{{ page_extension }}">Staff</a></p>
+</article>

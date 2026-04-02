@@ -1,0 +1,11 @@
+<section class="block process-preview">
+  <div class="container narrow">
+    <h2>{{ process_preview_heading }}</h2>
+    <ol style="margin:1rem 0;padding-left:1.2rem;line-height:1.6;">
+      {% for s in process_preview_steps %}
+      <li><strong>{{ s.title }}</strong> — {{ s.text }}</li>
+      {% endfor %}
+    </ol>
+    <p><a href="services.{{ page_extension }}">See services</a> · <a href="contact.{{ page_extension }}">Get started</a></p>
+  </div>
+</section>

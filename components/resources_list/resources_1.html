@@ -1,0 +1,12 @@
+<section class="block resources">
+  <div class="container narrow">
+    <h2>{{ resources_page_header }}</h2>
+    <p>{{ resources_page_intro }}</p>
+    <ul style="margin:1rem 0 0;padding-left:1.1rem;line-height:1.7;">
+      {% for r in resource_links %}
+      <li><a href="{{ r.url }}" rel="nofollow noopener noreferrer" target="_blank">{{ r.title }}</a> — {{ r.note }}</li>
+      {% endfor %}
+    </ul>
+    <p style="margin-top:1.25rem;"><a href="blog.{{ page_extension }}">Read our blog</a> for longer guides.</p>
+  </div>
+</section>

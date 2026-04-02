@@ -1,0 +1,10 @@
+<section class="block clients-strip" aria-labelledby="clients-h">
+  <div class="container">
+    <h2 id="clients-h" style="text-align:center;font-size:1rem;text-transform:uppercase;letter-spacing:0.06em;color:#64748b;">{{ clients_heading }}</h2>
+    <div style="display:flex;flex-wrap:wrap;gap:1rem 1.5rem;justify-content:center;align-items:center;margin-top:1rem;">
+      {% for c in client_logos %}
+      <div style="padding:0.5rem 1rem;border:1px solid #e5e7eb;border-radius:8px;background:#fafafa;font-weight:600;font-size:0.9rem;color:#334155;">{{ c.name }}</div>
+      {% endfor %}
+    </div>
+  </div>
+</section>

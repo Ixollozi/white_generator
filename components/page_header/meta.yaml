@@ -4,5 +4,11 @@ required_vars:
   - about_page_sub
   - contact_page_header
   - contact_page_sub
+  - services_heading
+  - services_intro
+  - blog_page_header
+  - blog_page_sub
+  - faq_page_header
+  - faq_page_sub
 variants:
   - page_header_1.html

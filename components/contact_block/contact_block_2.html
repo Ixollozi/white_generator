@@ -1,0 +1,54 @@
+<section class="block contact contact--split">
+  <div class="container">
+    <h2>Contact</h2>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.5rem;align-items:start;">
+      <div>
+        <h3>Send a message</h3>
+        <form class="contact-lead-form" action="/forms/message" method="post" style="display:grid;gap:0.6rem;">
+          <input type="text" name="website" autocomplete="off" class="sr-only" aria-hidden="true">
+          <input type="hidden" name="page" value="">
+          <label><span style="display:block;font-size:0.875rem;margin-bottom:0.25rem;">Email</span>
+            <input type="email" name="email" required style="width:100%;padding:0.5rem;"></label>
+          <label><span style="display:block;font-size:0.875rem;margin-bottom:0.25rem;">Message</span>
+            <textarea name="message" rows="4" required style="width:100%;padding:0.5rem;"></textarea></label>
+          <button type="submit" class="btn">Send</button>
+          <p class="contact-lead-msg" style="font-size:0.875rem;color:#64748b;margin:0;"></p>
+        </form>
+      </div>
+      <div>
+        <h3>Visit</h3>
+        <address style="font-style:normal;line-height:1.6;">{{ address_line1 }}<br>{{ city_region_postal }}<br>{{ country }}</address>
+        {% if contact_districts_line %}
+        <p style="margin:0.65rem 0 0;font-size:0.9rem;color:#475569;line-height:1.5;">{{ contact_districts_line }}</p>
+        {% endif %}
+        <p style="margin:1rem 0 0;"><strong>Hours</strong><br>{{ hours_weekday }}</p>
+        <p style="margin:0.5rem 0 0;"><a href="mailto:{{ email }}">{{ email }}</a><br><a href="tel:{{ phone | replace(' ', '') }}">{{ phone }}</a></p>
+        {% if maps_search_url %}<p style="margin-top:0.75rem;"><a href="{{ maps_search_url }}" rel="noopener noreferrer">Directions</a></p>{% endif %}
+      </div>
+    </div>
+    {% if maps_embed_url %}
+    <div class="map-embed" style="margin-top:1.25rem;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;">
+      <iframe title="{{ brand_name }} map" src="{{ maps_embed_url }}" width="100%" height="280" style="border:0;" loading="lazy"></iframe>
+    </div>
+    {% endif %}
+  </div>
+</section>
+<script>
+(function(){
+  var form = document.querySelector('.contact-lead-form');
+  if(!form) return;
+  var msg = form.querySelector('.contact-lead-msg');
+  var page = form.querySelector('input[name="page"]');
+  if(page && !page.value) { try{ page.value = location.pathname || ''; }catch(e){} }
+  form.addEventListener('submit', async function(ev){
+    ev.preventDefault();
+    if(msg) msg.textContent = 'Sending…';
+    try{
+      var fd = new FormData(form);
+      var res = await fetch(form.action || '/forms/message', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(Object.fromEntries(fd)) });
+      if(!res.ok){ if(msg) msg.textContent = 'Could not send.'; return; }
+      form.reset(); if(msg) msg.textContent = 'Sent. We’ll reply soon.';
+    }catch(e){ if(msg) msg.textContent = 'Could not send.'; }
+  });
+})();
+</script>

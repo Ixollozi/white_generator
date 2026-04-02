@@ -1,0 +1,23 @@
+inject_before: contact_teaser
+index_extras:
+  - testimonials
+  - faq
+nav_items:
+  - { href: index.php, label: Home }
+  - { href: about.php, label: About }
+  - { href: services.php, label: Services }
+  - { href: contact.php, label: Book appointment }
+brand_prefixes:
+  - Bright
+  - Clear
+  - Pearl
+  - Summit
+  - Maple
+  - Gentle
+brand_suffixes:
+  - Dental
+  - Dentistry
+  - Dental Care
+  - Dental Group
+  - Smile
+  - Oral Health

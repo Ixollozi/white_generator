@@ -1,0 +1,12 @@
+testimonials_heading: What clients say
+testimonial_items:
+  - quote: "They caught a categorization error that would have cost us at tax time."
+    name: "Nicole F."
+    role: "Small business owner"
+  - quote: "Monthly closes are on time every month. My books are finally reliable."
+    name: "Derek W."
+    role: "E-commerce founder"
+  - quote: "Tax planning saved us more than their annual fee. Easy decision."
+    name: "Susan C."
+    role: "Partnership owner"
+services_seo_description: "{brand_name} provides bookkeeping, tax preparation, and financial advisory for small businesses and owner-operated companies."

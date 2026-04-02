@@ -1,0 +1,23 @@
+inject_before: contact_teaser
+index_extras:
+  - testimonials
+  - faq
+nav_items:
+  - { href: index.php, label: Home }
+  - { href: about.php, label: About us }
+  - { href: services.php, label: Services }
+  - { href: contact.php, label: Book visit }
+brand_prefixes:
+  - Clear
+  - Summit
+  - Maple
+  - Harbor
+  - Valley
+  - Bright
+brand_suffixes:
+  - Medical
+  - Health
+  - Medical Group
+  - Clinic
+  - Health Centre
+  - Care

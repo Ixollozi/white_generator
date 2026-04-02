@@ -1,0 +1,20 @@
+<section class="block portfolio">
+  <div class="container">
+    <h2>{{ portfolio_page_header }}</h2>
+    <p class="intro">{{ portfolio_page_intro }}</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem;margin-top:1.25rem;">
+      {% for item in portfolio_items %}
+      <article class="card" style="overflow:hidden;border-radius:12px;border:1px solid #e5e7eb;">
+        {% if item.image_src %}
+        <img src="{{ item.image_src }}" alt="{{ item.title }}" width="400" height="240" loading="lazy" decoding="async" style="width:100%;height:180px;object-fit:cover;">
+        {% endif %}
+        <div style="padding:1rem;">
+          <h3 style="margin:0 0 0.35rem;">{{ item.title }}</h3>
+          <p style="margin:0;font-size:0.9rem;color:#64748b;">{{ item.summary }}</p>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+    <p style="margin-top:1.25rem;"><a href="contact.{{ page_extension }}">Discuss a similar project</a></p>
+  </div>
+</section>

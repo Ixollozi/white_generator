@@ -1,0 +1,24 @@
+<section class="container authors-page">
+  <h1>Newsroom staff</h1>
+  <p class="intro">{{ about_page_sub | default('Writers and editors behind the bylines.') }}</p>
+  <div class="authors-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1.5rem;margin-top:1.5rem;">
+    {% for a in news_authors %}
+    <article class="card author-card" style="border:1px solid #e5e7eb;border-radius:12px;padding:1rem;background:#fff;">
+      {% if a.photo_src %}
+      <p style="margin:0 0 0.75rem;"><img src="{{ a.photo_src }}" alt="{{ a.name }}" width="240" height="240" loading="lazy" decoding="async" style="width:100%;max-width:240px;height:auto;border-radius:8px;object-fit:cover;"></p>
+      {% endif %}
+      <h2 style="margin:0 0 0.25rem;font-size:1.15rem;">{{ a.name }}</h2>
+      <p style="margin:0 0 0.75rem;font-size:0.9rem;color:#64748b;">{{ a.title }}</p>
+      <p style="font-size:0.95rem;line-height:1.5;">{{ a.bio }}</p>
+      <h3 style="font-size:0.95rem;margin:1rem 0 0.35rem;">Recent work</h3>
+      <ul style="margin:0;padding-left:1.1rem;font-size:0.9rem;">
+        {% for bp in blog_posts %}
+        {% if bp.author_id == a.id %}
+        <li><a href="article-{{ bp.anchor }}.{{ page_extension }}">{{ bp.title }}</a></li>
+        {% endif %}
+        {% endfor %}
+      </ul>
+    </article>
+    {% endfor %}
+  </div>
+</section>

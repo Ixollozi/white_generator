@@ -1,0 +1,35 @@
+<section class="block faq faq--accordion">
+  <div class="container narrow">
+    <h2>{{ faq_heading }}</h2>
+    <dl class="faq-list" data-faq-accordion>
+      {% for item in faq_items %}
+      <dt class="faq-q" role="button" tabindex="0" aria-expanded="false">{{ item.q }}</dt>
+      <dd class="faq-a" hidden>{{ item.a }}</dd>
+      {% endfor %}
+    </dl>
+  </div>
+  <script>
+  (function(){
+    var root=document.querySelector('[data-faq-accordion]');
+    if(!root) return;
+    var pairs=[];
+    var dts=root.querySelectorAll('dt.faq-q');
+    dts.forEach(function(dt){
+      var dd=dt.nextElementSibling;
+      if(dd&&dd.tagName==='DD') pairs.push({dt:dt,dd:dd});
+    });
+    function toggle(p, open){
+      var o=open!==undefined?open:p.dd.hasAttribute('hidden');
+      if(o){ p.dd.removeAttribute('hidden'); p.dt.setAttribute('aria-expanded','true'); }
+      else { p.dd.setAttribute('hidden',''); p.dt.setAttribute('aria-expanded','false'); }
+    }
+    pairs.forEach(function(p){
+      p.dd.setAttribute('hidden','');
+      p.dt.addEventListener('click',function(){ toggle(p); });
+      p.dt.addEventListener('keydown',function(e){
+        if(e.key==='Enter'||e.key===' '){ e.preventDefault(); toggle(p); }
+      });
+    });
+  })();
+  </script>
+</section>

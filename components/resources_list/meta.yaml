@@ -1,0 +1,8 @@
+slot: resources_list
+required_vars:
+  - page_extension
+  - resources_page_header
+  - resources_page_intro
+  - resource_links
+variants:
+  - resources_1.html

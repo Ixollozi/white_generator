@@ -11,3 +11,14 @@
 }
 .reference-site .reference-nav a { color: #93c5fd; }
 .reference-site .nav-brand { font-weight: 700; margin-right: 1rem; }
+.logo { display: inline-flex; align-items: center; }
+.logo img { height: 36px; width: auto; display: block; }
+body.header-sticky.reference-site .site-main > .container.nav-row,
+body.site-sticky-header.reference-site .site-main > .container.nav-row {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid #e5e7eb;
+}

@@ -1,0 +1,8 @@
+slot: portfolio_grid
+required_vars:
+  - page_extension
+  - portfolio_page_header
+  - portfolio_page_intro
+  - portfolio_items
+variants:
+  - portfolio_grid_1.html

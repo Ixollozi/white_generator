@@ -1,0 +1,79 @@
+<footer class="block footer footer--split">
+  <div class="container" style="display:flex;flex-wrap:wrap;gap:1.5rem;justify-content:space-between;align-items:flex-start;">
+    <div>
+      <strong>{{ brand_name }}</strong>
+      <p class="muted">{{ tagline }}</p>
+      <p style="font-size:0.85rem;color:#64748b;">Est. {{ founded_year }}</p>
+    </div>
+    <div class="legal-links" style="display:flex;gap:0.65rem;flex-wrap:wrap;">
+      {% if policy_links %}
+        {% for pl in policy_links %}
+          <a href="{{ pl.href }}">{{ pl.label }}</a>
+        {% endfor %}
+      {% else %}
+        <a href="{% if page_extension == 'php' %}privacy-policy.php{% else %}privacy-policy.{{ page_extension }}{% endif %}">Privacy</a>
+        <a href="{% if page_extension == 'php' %}terms-of-service.php{% else %}terms-of-service.{{ page_extension }}{% endif %}">Terms</a>
+        <a href="{% if page_extension == 'php' %}cookie-policy.php{% else %}cookie-policy.{{ page_extension }}{% endif %}">Cookies</a>
+      {% endif %}
+    </div>
+  </div>
+  <div class="container" style="margin-top:1rem;font-size:0.875rem;">
+    <p>{{ email }} · {{ phone }}</p>
+    <p style="white-space:pre-line;">{{ address_multiline | default(address) }}</p>
+  </div>
+  {% if social_instagram or social_tiktok or social_twitter or social_linkedin or social_facebook %}
+  <div class="container" style="margin-top:0.5rem;font-size:0.9rem;">
+    <p style="margin:0;display:flex;flex-wrap:wrap;gap:0.35rem 0.65rem;">
+      {% if social_instagram %}<a href="{{ social_instagram }}" rel="noopener noreferrer" target="_blank">Instagram</a>{% endif %}
+      {% if social_tiktok %}<a href="{{ social_tiktok }}" rel="noopener noreferrer" target="_blank">TikTok</a>{% endif %}
+      {% if social_twitter %}<a href="{{ social_twitter }}" rel="noopener noreferrer" target="_blank">X</a>{% endif %}
+      {% if social_linkedin %}<a href="{{ social_linkedin }}" rel="noopener noreferrer" target="_blank">LinkedIn</a>{% endif %}
+      {% if social_facebook %}<a href="{{ social_facebook }}" rel="noopener noreferrer" target="_blank">Facebook</a>{% endif %}
+    </p>
+  </div>
+  {% endif %}
+  <div class="container" style="margin-top:0.75rem;font-size:0.8rem;color:#6b7280;">
+    <p style="margin:0;">© {{ year }} {{ brand_name }}. All rights reserved.</p>
+  </div>
+  <div class="container" style="margin-top:1rem;">
+    <form class="footer-newsletter" action="/forms/subscribe" method="post" style="display:flex;flex-wrap:wrap;gap:0.5rem;align-items:center;">
+      <input type="text" name="website" autocomplete="off" class="sr-only" aria-hidden="true">
+      <input type="hidden" name="page" value="">
+      <label style="flex:1;min-width:200px;"><input type="email" name="email" placeholder="Your email address" autocomplete="email" aria-label="Newsletter email" style="width:100%;padding:0.45rem 0.6rem;" required></label>
+      <button type="submit" class="btn">Subscribe</button>
+    </form>
+    <p class="footer-newsletter-msg" style="font-size:0.85rem;color:#64748b;margin:0.5rem 0 0;"></p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var form = document.querySelector('.footer-newsletter');
+  if(!form) return;
+  var msg = form.parentElement && form.parentElement.querySelector('.footer-newsletter-msg');
+  var page = form.querySelector('input[name=\"page\"]');
+  if(page && !page.value) { try{ page.value = window.location && window.location.pathname ? window.location.pathname : ''; }catch(e){} }
+  form.addEventListener('submit', async function(ev){
+    try{
+      ev.preventDefault();
+      if(msg) msg.textContent = 'Submitting…';
+      var fd = new FormData(form);
+      var payload = Object.fromEntries(fd.entries());
+      var res = await fetch(form.getAttribute('action') || '/forms/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if(!res.ok){
+        if(msg) msg.textContent = 'Could not subscribe. Please try again.';
+        return;
+      }
+      form.reset();
+      if(page) { try{ page.value = window.location && window.location.pathname ? window.location.pathname : ''; }catch(e){} }
+      if(msg) msg.textContent = 'Subscribed. Check your inbox for updates.';
+    }catch(e){
+      if(msg) msg.textContent = 'Could not subscribe. Please try again.';
+    }
+  }, { passive: false });
+})();
+</script>

@@ -1,0 +1,20 @@
+testimonials_heading: What homeowners say
+testimonial_items:
+  - quote: "They quoted before starting and cleaned up the work area completely."
+    name: "Mark R."
+    role: "Homeowner"
+  - quote: "Emergency call on a Sunday — they were here in under an hour."
+    name: "Lisa C."
+    role: "Property manager"
+  - quote: "Finally found a plumber who explains what's wrong without upselling."
+    name: "Tom B."
+    role: "Homeowner"
+faq_heading: Common questions
+faq_items:
+  - q: "Do you offer emergency service?"
+    a: "Yes — 24/7 dispatch is available for burst pipes, sewage backups, and no-water situations."
+  - q: "Are your plumbers licensed?"
+    a: "Every technician holds a valid journeyman or master plumber license and carries insurance."
+  - q: "Do you provide written estimates?"
+    a: "Always. We diagnose first, then present a written quote before any work begins."
+services_seo_description: "{brand_name} delivers licensed plumbing repairs, installations, and emergency service for residential and commercial properties."

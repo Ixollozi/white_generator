@@ -10,8 +10,16 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-top: 1rem;
-  padding-bottom: 1rem;
+  padding: 0.5rem 0;
 }
-.minimal-header .logo { font-weight: 800; text-decoration: none; color: inherit; }
+.minimal-header .logo { font-weight: 800; text-decoration: none; color: inherit; display: inline-flex; align-items: center; }
+.minimal-header .logo img { height: 36px; width: auto; display: block; }
 .minimal-header nav a { color: #0f766e; }
+body.header-sticky .minimal-header,
+body.site-sticky-header .minimal-header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(8px);
+}

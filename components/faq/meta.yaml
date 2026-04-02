@@ -1,0 +1,6 @@
+required_vars:
+  - faq_heading
+  - faq_items
+variants:
+  - faq_1.html
+  - faq_2.html

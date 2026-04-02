@@ -1,0 +1,20 @@
+testimonials_heading: What drivers say
+testimonial_items:
+  - quote: "They sent photos of the worn brakes to my phone before recommending replacement."
+    name: "Kevin R."
+    role: "Regular customer"
+  - quote: "Transparent pricing. They didn't try to sell me services I didn't need."
+    name: "Laura B."
+    role: "Vehicle owner"
+  - quote: "My car runs better than it has in years. These guys know what they're doing."
+    name: "Marcus J."
+    role: "Fleet operator"
+faq_heading: Service questions
+faq_items:
+  - q: "Do I need an appointment?"
+    a: "Appointments are recommended for efficiency, but we accept walk-ins for quick inspections and oil services."
+  - q: "Do you work on all makes and models?"
+    a: "We service most domestic and import vehicles. Call ahead for specialty or European models."
+  - q: "What's your warranty?"
+    a: "Parts and labor are warranted in writing — duration depends on the service performed."
+services_seo_description: "{brand_name} offers ASE-certified auto repair, maintenance, and diagnostics with digital inspections and upfront pricing."

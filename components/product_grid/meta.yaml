@@ -1,0 +1,4 @@
+id: product_grid
+display_name: Product grid
+variants:
+  - file: product_grid_1.html

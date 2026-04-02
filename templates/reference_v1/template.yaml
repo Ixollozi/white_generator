@@ -5,6 +5,7 @@ page_extension: php
 pages:
   index:
     shuffle_allowed: true
+    required: true
     slots:
       - nav_bar
       - hero
@@ -14,13 +15,16 @@ pages:
       - footer
   about:
     shuffle_allowed: false
+    required: true
     slots:
       - nav_bar
       - page_header
       - about
+      - team_strip
       - footer
   contact:
     shuffle_allowed: false
+    required: true
     slots:
       - nav_bar
       - page_header
@@ -32,4 +36,96 @@ pages:
       - nav_bar
       - page_header
       - services
+      - footer
+  blog:
+    shuffle_allowed: false
+    slots:
+      - nav_bar
+      - page_header
+      - blog_list
+      - footer
+  faq:
+    shuffle_allowed: false
+    slots:
+      - nav_bar
+      - page_header
+      - faq
+      - footer
+  team:
+    shuffle_allowed: false
+    slots:
+      - nav_bar
+      - page_header
+      - team_strip
+      - footer
+  testimonials:
+    shuffle_allowed: false
+    slots:
+      - nav_bar
+      - page_header
+      - testimonials
+      - footer
+  pricing:
+    shuffle_allowed: false
+    slots:
+      - nav_bar
+      - page_header
+      - pricing_table
+      - footer
+  process:
+    shuffle_allowed: false
+    slots:
+      - nav_bar
+      - page_header
+      - process_steps
+      - footer
+  portfolio:
+    shuffle_allowed: false
+    slots:
+      - nav_bar
+      - page_header
+      - portfolio_grid
+      - footer
+  case_studies:
+    shuffle_allowed: false
+    slots:
+      - nav_bar
+      - page_header
+      - case_studies_list
+      - footer
+  careers:
+    shuffle_allowed: false
+    slots:
+      - nav_bar
+      - page_header
+      - careers_block
+      - footer
+  industries:
+    shuffle_allowed: false
+    slots:
+      - nav_bar
+      - page_header
+      - industries_served
+      - footer
+  resources:
+    shuffle_allowed: false
+    slots:
+      - nav_bar
+      - page_header
+      - resources_list
+      - footer
+  service_areas:
+    shuffle_allowed: false
+    slots:
+      - nav_bar
+      - page_header
+      - service_area_hub
+      - footer
+  shop:
+    shuffle_allowed: false
+    slots:
+      - nav_bar
+      - page_header
+      - product_grid
+      - shop_product_details
       - footer

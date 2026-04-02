@@ -1,0 +1,25 @@
+testimonials_heading: Reader feedback
+testimonial_items:
+  - quote: "Explainers save me from having to parse three Twitter threads."
+    name: "Anonymous reader"
+    role: "Newsletter subscriber"
+  - quote: "Corrections are visible — I trust the updates."
+    name: "M. Ortiz"
+    role: "Subscriber since {subscriber_since_year}"
+  - quote: "Daily brief fits my commute — sources linked clearly."
+    name: "K. Singh"
+    role: "Mobile reader"
+faq_heading: Tips & ethics
+faq_items:
+  - q: "How can I send a tip?"
+    a: "Use the newsroom contact form — include how to reach you and what documents you can share."
+  - q: "Do you use AI to write stories?"
+    a: "No unsourced AI prose — editors verify claims and attribute reporting."
+  - q: "Corrections policy?"
+    a: "Material fixes are labeled on the story with a timestamp when feasible."
+gallery_heading: Desk & process
+gallery_items:
+  - caption: "Editorial calendar"
+  - caption: "Fact-check notes"
+  - caption: "Briefing layout"
+services_seo_description: "{brand_name} publishes explainers, briefings, and reported coverage with transparent sourcing and corrections."

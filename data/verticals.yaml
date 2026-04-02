@@ -1,0 +1,668 @@
+# Vertical niches: coherent copy for generated sites (UI labels + content + SEO/tagline hints).
+# Placeholders: {brand_name}, {activity_summary} where noted.
+
+- id: cleaning
+  label_ru: Клининг
+  hint: Коммерческий клининг, офисы, торговые помещения
+  activity_summary: commercial cleaning, sanitization, and facility upkeep
+  tagline_candidates:
+    - "{brand_name} — reliable cleaning schedules and spotless workspaces."
+    - "{brand_name} — commercial cleaning built around safety and consistency."
+  seo_blurb: "{brand_name} offers commercial cleaning, disinfection, and scheduled facility services for offices and retail."
+  hero_title: "{brand_name} — commercial cleaning teams trust"
+  hero_subtitle: Deep cleaning, daily maintenance, and sanitization for offices, retail, and high-traffic spaces — with clear SLAs and accountable crews.
+  about_page_header: About us
+  about_page_sub: How we plan routes, train crews, and keep quality measurable.
+  contact_page_header: Contact
+  contact_page_sub: Request a walkthrough or a tailored cleaning schedule.
+  about_heading: Who we are
+  about_body: "{brand_name} plans and delivers commercial cleaning for operations that cannot afford downtime. We align schedules with your hours, document checklists, and focus on high-touch surfaces and consistent results."
+  services_heading: What we do
+  services_intro: Our work centers on dependable cleaning programs, not one-off surprises — so your spaces stay presentable and hygienic week after week.
+  service_items:
+    - title: Daily & periodic cleaning
+      text: Structured routes for offices and retail floors, with periodic deep-clean windows.
+    - title: Sanitization & supplies
+      text: Surface protocols, product choices suited to your surfaces, and restocking basics where agreed.
+    - title: Quality checks
+      text: Spot audits, photo logs on request, and a single point of contact for schedule changes.
+  contact_teaser: Tell us about your square footage, hours, and priorities — we respond within one business day.
+  contact_form_placeholder: "Describe your space, preferred schedule, and cleaning priorities."
+  hero_title_alt:
+    - "{brand_name} keeps workplaces guest-ready"
+    - "{brand_name} — facility cleaning without guesswork"
+  hero_subtitle_alt:
+    - Focused crews, documented tasks, and flexible scheduling for offices, clinics, and storefronts.
+
+- id: marketing_agency
+  label_ru: Маркетинговое агентство
+  hint: SEO, контент, аналитика, CRO — в духе digital-агентств
+  activity_summary: digital marketing, SEO, structured data, and conversion optimization
+  tagline_candidates:
+    - "{brand_name} — search visibility, structured data, and campaigns that convert."
+    - "{brand_name} — measurable growth across organic search and on-site experience."
+  seo_blurb: "{brand_name} is a digital marketing partner focused on SEO, schema markup, content quality, analytics, and conversion improvements."
+  hero_title: "{brand_name} — SEO, content, and revenue-focused campaigns"
+  hero_subtitle: Technical SEO, entity-aware content, schema implementation, and CRO experiments — with reporting you can act on.
+  about_page_header: About us
+  about_page_sub: Strategy, execution, and iterative optimization — the way modern search rewards.
+  contact_page_header: Contact
+  contact_page_sub: Share your site, goals, and markets — we reply within one business day.
+  about_heading: Who we are
+  about_body: "{brand_name} combines editorial discipline with technical SEO. We audit crawl and indexation, improve internal linking and schema, and align landing pages with intent so traffic turns into qualified leads."
+  services_heading: Services
+  services_intro: Engagements blend research, implementation, and measurement — so gains compound instead of eroding after the next algorithm update.
+  service_items:
+    - title: Technical & on-page SEO
+      text: Crawl hygiene, Core Web Vitals awareness, internal linking, and intent-aligned page templates.
+    - title: Schema & structured data
+      text: JSON-LD where appropriate, validated markup, and monitoring after changes ship.
+    - title: Analytics & CRO
+      text: Event plans, funnel reviews, and test ideas grounded in behavior — not vanity metrics.
+  contact_teaser: Send your domain and primary KPI — we’ll suggest a sensible first sprint.
+  contact_form_placeholder: "Share your website URL, current traffic, and what you want to improve."
+  hero_title_alt:
+    - "{brand_name} — organic growth with clear milestones"
+    - "{brand_name} partners for search-first growth"
+  hero_subtitle_alt:
+    - "From audits to shipped fixes: schema, content refreshes, and landing-page tests."
+
+- id: cafe_restaurant
+  label_ru: Кафе и ресторан
+  hint: Гастрономия, зал, брони, кейтеринг
+  activity_summary: dining, hospitality, reservations, and guest experience
+  tagline_candidates:
+    - "{brand_name} — thoughtful food, warm service, and a room that feels lived-in."
+    - "{brand_name} — neighborhood hospitality with a concise, seasonal menu."
+  seo_blurb: "{brand_name} welcomes guests for dine-in hospitality, reservations, and seasonal menus in a relaxed, professional setting."
+  hero_title: "{brand_name} — food, drink, and hospitality worth returning for"
+  hero_subtitle: Seasonally minded plates, a curated beverage list, and service that reads the room — from quiet lunches to celebratory evenings.
+  about_page_header: About
+  about_page_sub: Our kitchen, our suppliers, and how we host.
+  contact_page_header: Contact & hours
+  contact_page_sub: Reservations, groups, and directions — we respond quickly during service windows.
+  about_heading: Our story
+  about_body: "{brand_name} builds menus around producers we trust and a dining room designed for conversation. We train staff to guide guests without rushing — whether it’s a weekday bite or a full-table dinner."
+  services_heading: What we offer
+  services_intro: From the dining room to private occasions — hospitality that stays consistent when it gets busy.
+  service_items:
+    - title: Dining room
+      text: Lunch and dinner service with reservations encouraged on peak nights.
+    - title: Beverages
+      text: Pairings-friendly list — low-intervention wines, classics, and non-alcoholic options.
+    - title: Groups & events
+      text: Set menus for small parties; ask about timing and minimums.
+  contact_teaser: Ask about tonight’s reservations or a date for your group — we reply within one business day.
+  contact_form_placeholder: "Party size, preferred date and time, and any dietary needs."
+  hero_title_alt:
+    - "{brand_name} — seasonal plates and honest hospitality"
+    - "{brand_name} — your table is ready"
+  hero_subtitle_alt:
+    - Ingredient-led dishes, calm service, and a room that works for dates and small teams alike.
+
+- id: fitness
+  label_ru: Фитнес-клуб
+  hint: Тренировки, абонементы, групповые программы
+  activity_summary: fitness training, memberships, and coached group programs
+  tagline_candidates:
+    - "{brand_name} — strength, conditioning, and coaching that fits real schedules."
+    - "{brand_name} — training floor discipline with approachable coaching."
+  seo_blurb: "{brand_name} offers memberships, coached sessions, and group training for strength, conditioning, and sustainable habits."
+  hero_title: "{brand_name} — training floor clarity and coached progress"
+  hero_subtitle: Smart programming, attentive coaching, and equipment maintained for heavy use — whether you’re starting out or chasing a PR.
+  about_page_header: About the club
+  about_page_sub: Equipment, coaches, and the culture we protect on the floor.
+  contact_page_header: Contact
+  contact_page_sub: Tours, trials, and membership questions — we respond within one business day.
+  about_heading: Who we are
+  about_body: "{brand_name} treats the gym as a coached environment — not a maze of machines. We prioritize movement quality, progressive overload, and schedules that respect busy lives."
+  services_heading: Membership & programs
+  services_intro: Choose access that matches how often you train — with optional coaching add-ons.
+  service_items:
+    - title: Open gym
+      text: Barbells, racks, cardio, and space to follow your plan during staffed hours.
+    - title: Small-group training
+      text: Coach-led blocks with capped attendance so form stays supervised.
+    - title: On-ramp & personal training
+      text: Short intros for beginners or focused blocks when you want a tailored plan.
+  contact_teaser: Book a tour or ask about trial options — we’ll get back to you quickly.
+  contact_form_placeholder: "Your training goals, preferred schedule, and any injuries to mention."
+  hero_title_alt:
+    - "{brand_name} — serious equipment, approachable coaching"
+    - "{brand_name} — where consistency beats trends"
+  hero_subtitle_alt:
+    - Memberships, coached groups, and a floor team that enforces safety and etiquette.
+
+- id: news
+  label_ru: Новости и медиа
+  hint: Редакция, дайджесты, факчек, подписка
+  activity_summary: editorial coverage, briefings, and reader-first reporting
+  tagline_candidates:
+    - "{brand_name} — fast context, careful sourcing, and clear explainers."
+    - "{brand_name} — daily briefings built for readers who skim once and share thoughtfully."
+  seo_blurb: "{brand_name} publishes independent reporting, explainers, and briefings with transparent sourcing and corrections policy."
+  hero_title: "{brand_name} — news briefings with sourcing you can follow"
+  hero_subtitle: Explainers, daily digests, and on-the-record reporting — edited for clarity, not noise.
+  about_page_header: About the publication
+  about_page_sub: Ethics, corrections, and how we work with readers.
+  contact_page_header: Contact the newsroom
+  contact_page_sub: Tips, corrections, and partnership inquiries — we monitor inbox during business hours.
+  about_heading: Editorial approach
+  about_body: "{brand_name} prioritizes primary sources, labels opinion clearly, and updates stories when facts change. We invest in explainers so readers understand why something matters — not just that it happened."
+  services_heading: What we publish
+  services_intro: Coverage you can scan quickly — with context for people who don’t live on social feeds.
+  service_items:
+    - title: Daily briefings
+      text: Curated summaries with timestamps and links to originals.
+    - title: Explainers & guides
+      text: Background pieces that define terms and lay out competing claims fairly.
+    - title: Tips & verification
+      text: Secure channels for leads; we review claims before publication when feasible.
+  contact_teaser: Send a tip or a correction request — newsroom staff reply within one business day.
+  contact_form_placeholder: "Your tip, correction, or inquiry for the newsroom."
+  hero_title_alt:
+    - "{brand_name} — clarity for busy readers"
+    - "{brand_name} — reporting with room for updates"
+  hero_subtitle_alt:
+    - Editors who label speculation, link out, and correct the record when needed.
+
+- id: clothing
+  label_ru: Одежда и мода
+  hint: Ритейл, размеры, доставка, капсулы
+  activity_summary: apparel retail, sizing guidance, and seasonal collections
+  tagline_candidates:
+    - "{brand_name} — considered cuts, honest fabric notes, and easy returns."
+    - "{brand_name} — wardrobe pieces designed to layer and last."
+  seo_blurb: "{brand_name} sells apparel and accessories with clear sizing notes, seasonal drops, and straightforward shipping and returns."
+  hero_title: "{brand_name} — apparel designed for real wardrobes"
+  hero_subtitle: Fabrics we’d wear ourselves, fit notes that reduce guesswork, and collections meant to mix — not clutter your closet.
+  about_page_header: About the brand
+  about_page_sub: Design, manufacturing partners, and how we talk about fit.
+  contact_page_header: Contact & support
+  contact_page_sub: Sizing help, orders, and returns — we respond within one business day.
+  about_heading: Our philosophy
+  about_body: "{brand_name} focuses on a tight range of silhouettes and materials we can explain plainly. We photograph products in natural light, publish measurements, and treat customer service as part of the product."
+  services_heading: Shopping with us
+  services_intro: Buying clothes online should feel fair — clear policies, human support, and pieces that survive washing.
+  service_items:
+    - title: Collections
+      text: Seasonal drops and evergreen basics you can combine across releases.
+    - title: Sizing & care
+      text: Garment measurements, fabric notes, and washing guidance on every product page.
+    - title: Shipping & returns
+      text: Trackable fulfillment and a returns process described upfront — no hidden steps.
+  contact_teaser: Ask about fit for your measurements or an order status — we’re here to help.
+  contact_form_placeholder: "Order number, sizing question, or return request details."
+  hero_title_alt:
+    - "{brand_name} — fewer, better layers"
+    - "{brand_name} — honest product pages, calm aesthetic"
+  hero_subtitle_alt:
+    - Capsule-friendly pieces, transparent fabric choices, and support that answers sizing questions.
+
+- id: dental
+  label_ru: Стоматология
+  hint: Терапия, протезирование, имплантация, гигиена
+  activity_summary: general dentistry, cosmetic procedures, and preventive oral care
+  tagline_candidates:
+    - "{brand_name} — patient-centered dentistry with clear treatment plans."
+    - "{brand_name} — modern dental care built on transparency and comfort."
+  seo_blurb: "{brand_name} provides general, cosmetic, and preventive dentistry with upfront pricing and a calm, modern office environment."
+  hero_title: "{brand_name} — dental care you can understand and trust"
+  hero_subtitle: Thorough exams, honest treatment plans, and a team trained to keep visits comfortable — from routine cleanings to complex restorations.
+  about_page_header: About our practice
+  about_page_sub: Our clinical approach, continuing education, and what to expect as a patient.
+  contact_page_header: Contact
+  contact_page_sub: Book an appointment, ask about insurance, or request a second opinion.
+  about_heading: Our approach
+  about_body: "{brand_name} treats every patient as a long-term relationship, not a procedure code. We explain findings on-screen during exams, present options without pressure, and invest in equipment that makes visits faster and more predictable."
+  services_heading: What we do
+  services_intro: Comprehensive dentistry under one roof — from first visits to specialized restorations.
+  service_items:
+    - title: Preventive & general dentistry
+      text: Exams, cleanings, X-rays, and early intervention for cavities and gum disease.
+    - title: Cosmetic & restorative work
+      text: Crowns, veneers, whitening, and implant-supported restorations planned with digital imaging.
+    - title: Emergency & same-day care
+      text: Walk-in slots for pain, fractures, and urgent issues — call ahead when possible.
+  contact_teaser: Ready for a visit or have a question about a procedure? We respond within one business day.
+  contact_form_placeholder: "Your concern, preferred appointment time, and insurance details if applicable."
+  hero_title_alt:
+    - "{brand_name} — honest dentistry, modern equipment"
+    - "{brand_name} — where dental visits feel straightforward"
+  hero_subtitle_alt:
+    - Preventive care, restorations, and emergency slots in a practice designed around patient comfort.
+
+- id: plumbing
+  label_ru: Сантехника
+  hint: Ремонт труб, установка сантехники, аварийные вызовы
+  activity_summary: residential and commercial plumbing repair, installation, and emergency service
+  tagline_candidates:
+    - "{brand_name} — licensed plumbers who show up on time and quote before they start."
+    - "{brand_name} — plumbing repairs and installs with upfront pricing."
+  seo_blurb: "{brand_name} delivers licensed plumbing services including repairs, new installations, and 24/7 emergency response for homes and businesses."
+  hero_title: "{brand_name} — plumbing done right the first time"
+  hero_subtitle: Licensed technicians, transparent estimates, and work guaranteed in writing — from leaky faucets to full repiping projects.
+  about_page_header: About us
+  about_page_sub: How we train, price, and stand behind our work.
+  contact_page_header: Contact
+  contact_page_sub: Describe the issue or schedule a visit — emergencies get priority dispatch.
+  about_heading: Who we are
+  about_body: "{brand_name} runs a dispatch-first operation: calls are triaged, technicians carry stocked trucks, and every job gets a written quote before tools come out. We hire licensed journeymen and invest in ongoing code training."
+  services_heading: Our services
+  services_intro: Residential and light-commercial plumbing — from minor fixes to planned replacements.
+  service_items:
+    - title: Repairs & diagnostics
+      text: Leak detection, fixture repairs, drain clearing, and camera inspections to find problems before they spread.
+    - title: Installation & replacement
+      text: Water heaters, supply lines, fixtures, and bathroom rough-ins for remodels and new builds.
+    - title: Emergency plumbing
+      text: After-hours response for burst pipes, sewer backups, and water shut-off situations.
+  contact_teaser: Tell us what's happening — we'll get a technician scheduled or dispatched for emergencies.
+  contact_form_placeholder: "Describe the issue, your address, and preferred time window."
+  hero_title_alt:
+    - "{brand_name} — fast response, honest quotes"
+    - "{brand_name} — licensed plumbing you can rely on"
+  hero_subtitle_alt:
+    - Stocked trucks, upfront pricing, and guaranteed work for homes and commercial properties.
+
+- id: roofing
+  label_ru: Кровельные работы
+  hint: Монтаж, ремонт, инспекция кровли
+  activity_summary: roof installation, repair, and inspection for residential and commercial properties
+  tagline_candidates:
+    - "{brand_name} — roofing crews that document every layer and stand behind their installs."
+    - "{brand_name} — quality roofing with inspections, warranties, and no surprise charges."
+  seo_blurb: "{brand_name} provides professional roofing services including installation, repair, storm damage assessment, and maintenance for residential and commercial buildings."
+  hero_title: "{brand_name} — roofing built to last and documented to prove it"
+  hero_subtitle: Full tear-offs, targeted repairs, and storm-damage inspections — with photo documentation, manufacturer-backed warranties, and crews that clean up after themselves.
+  about_page_header: About
+  about_page_sub: Our crews, certifications, and the standards we hold on every roof.
+  contact_page_header: Contact
+  contact_page_sub: Schedule an inspection or request a repair estimate — we respond promptly.
+  about_heading: Who we are
+  about_body: "{brand_name} treats roofing as a building-science problem, not just shingle replacement. We inspect decking, ventilation, and flashing before quoting, and we photograph progress so you know what's under the surface."
+  services_heading: What we do
+  services_intro: From inspections to complete re-roofs — work you can verify with documentation and warranty paperwork.
+  service_items:
+    - title: Roof installation
+      text: Full tear-off and replacement with material options explained, proper underlayment, and manufacturer warranty registration.
+    - title: Repairs & leak resolution
+      text: Targeted fixes for storm damage, flashing failures, and aging sections — scoped to avoid unnecessary full replacements.
+    - title: Inspections & maintenance
+      text: Annual or pre-sale inspections with written reports, photos, and honest assessments of remaining service life.
+  contact_teaser: Describe your roof concern or request a free inspection — we follow up within one business day.
+  contact_form_placeholder: "Property type, roof age if known, and the issue you're seeing."
+  hero_title_alt:
+    - "{brand_name} — honest roof assessments, quality installs"
+    - "{brand_name} — roofing crews that get the details right"
+  hero_subtitle_alt:
+    - Inspections, installs, and storm-damage repairs backed by documentation and real warranties.
+
+- id: landscaping
+  label_ru: Ландшафтный дизайн
+  hint: Газон, озеленение, мощение, уход за участком
+  activity_summary: landscape design, lawn maintenance, and outdoor living construction
+  tagline_candidates:
+    - "{brand_name} — landscapes designed for how you actually use your yard."
+    - "{brand_name} — lawn care and hardscaping with a plan, not just a mower."
+  seo_blurb: "{brand_name} offers landscape design, lawn maintenance programs, and hardscape construction for residential and commercial properties."
+  hero_title: "{brand_name} — outdoor spaces that work year-round"
+  hero_subtitle: Design-build landscaping, seasonal lawn programs, and hardscape projects — planned around your property's soil, drainage, and sun exposure.
+  about_page_header: Our story
+  about_page_sub: How we design, install, and maintain landscapes that make sense for your site.
+  contact_page_header: Contact
+  contact_page_sub: Request a site visit or ask about seasonal programs.
+  about_heading: Who we are
+  about_body: "{brand_name} starts every project with a site walk — assessing soil, grade, sun patterns, and how you want to use the space. We design with local plant palettes, build with proper drainage, and offer maintenance plans that keep things looking sharp."
+  services_heading: Services
+  services_intro: From design concepts to weekly mowing — a single team that understands your property.
+  service_items:
+    - title: Landscape design & installation
+      text: Planting plans, grading, irrigation layout, and installation managed from concept through final walkthrough.
+    - title: Hardscaping & outdoor structures
+      text: Patios, retaining walls, walkways, and fire features built with proper base prep and drainage.
+    - title: Lawn care & seasonal maintenance
+      text: Mowing programs, fertilization schedules, aeration, and seasonal cleanups tailored to your turf type and climate.
+  contact_teaser: Tell us about your property and what you'd like to improve — we schedule site visits weekly.
+  contact_form_placeholder: "Property size, what you want to change, and your timeline."
+  hero_title_alt:
+    - "{brand_name} — landscapes rooted in your site's reality"
+    - "{brand_name} — design, build, and maintain outdoor spaces"
+  hero_subtitle_alt:
+    - Site-specific planting, durable hardscaping, and maintenance plans that prevent problems instead of chasing them.
+
+- id: consulting
+  label_ru: Консалтинг
+  hint: Стратегия, ИТ-консалтинг, оптимизация процессов
+  activity_summary: business strategy, process optimization, and technology advisory
+  tagline_candidates:
+    - "{brand_name} — advisory that moves past slide decks into implemented change."
+    - "{brand_name} — strategy consulting grounded in operations, not theory."
+  seo_blurb: "{brand_name} provides business and technology consulting — from strategic planning to process redesign and implementation support."
+  hero_title: "{brand_name} — consulting that ships, not just advises"
+  hero_subtitle: Strategy engagements, process audits, and technology roadmaps — delivered by practitioners who stay through implementation.
+  about_page_header: About the firm
+  about_page_sub: Our methodology, team backgrounds, and how engagements work.
+  contact_page_header: Contact
+  contact_page_sub: Outline your challenge and timeline — we schedule scoping calls within two business days.
+  about_heading: How we work
+  about_body: "{brand_name} scopes engagements around measurable outcomes, not billable hours alone. Our consultants have operational backgrounds — they've built and run the systems they now advise on — so recommendations stay realistic and implementable."
+  services_heading: Practice areas
+  services_intro: Engagements range from short diagnostic sprints to multi-quarter transformations — always with clear deliverables.
+  service_items:
+    - title: Strategy & market positioning
+      text: Competitive analysis, go-to-market planning, and business model stress-testing with senior advisors.
+    - title: Process optimization
+      text: Workflow mapping, bottleneck identification, and redesign projects that reduce cost or cycle time with evidence.
+    - title: Technology advisory
+      text: Architecture reviews, vendor evaluation, and migration planning grounded in your team's capacity and budget.
+  contact_teaser: Describe your current challenge and goals — we'll propose a scoping conversation.
+  contact_form_placeholder: "Your industry, the problem you're facing, and your rough timeline."
+  hero_title_alt:
+    - "{brand_name} — practical strategy, measurable outcomes"
+    - "{brand_name} — advisors who've operated what they recommend"
+  hero_subtitle_alt:
+    - From diagnostic sprints to full implementations — consulting built around delivery, not decks.
+
+- id: moving
+  label_ru: Переезды
+  hint: Квартирные и офисные переезды, упаковка, хранение
+  activity_summary: residential and commercial moving, packing, and storage services
+  tagline_candidates:
+    - "{brand_name} — moving crews that protect your belongings and respect your timeline."
+    - "{brand_name} — organized moves with clear pricing and careful handling."
+  seo_blurb: "{brand_name} provides residential and commercial moving services with upfront quotes, professional packing, and insured transport."
+  hero_title: "{brand_name} — moves planned, packed, and delivered on schedule"
+  hero_subtitle: Trained crews, padded trucks, and binding estimates — whether you're relocating a studio apartment or an entire office floor.
+  about_page_header: About us
+  about_page_sub: Our process, crew training, and how we keep your belongings safe.
+  contact_page_header: Contact
+  contact_page_sub: Request a quote or book your move date — we respond within one business day.
+  about_heading: Who we are
+  about_body: "{brand_name} runs moves like logistics projects. We inventory before we quote, assign dedicated crew leads, wrap and label systematically, and carry insurance that actually covers what's on the truck."
+  services_heading: What we do
+  services_intro: Full-service moving — from the first walkthrough to the last box placed in your new space.
+  service_items:
+    - title: Residential moving
+      text: Apartment and house moves with furniture disassembly, padding, and reassembly at destination.
+    - title: Commercial & office relocation
+      text: After-hours moves, IT equipment handling, and floor-plan placement so your team is operational on day one.
+    - title: Packing & storage
+      text: Full or partial packing services with labeled inventory, plus climate-controlled storage for items in transition.
+  contact_teaser: Share your origin, destination, and move date — we'll build a quote around your inventory.
+  contact_form_placeholder: "Moving from, moving to, approximate date, and any large or fragile items."
+  hero_title_alt:
+    - "{brand_name} — careful crews, binding estimates"
+    - "{brand_name} — the move, handled from start to finish"
+  hero_subtitle_alt:
+    - Inventoried loads, padded transport, and crews trained to handle furniture, electronics, and tight stairwells.
+
+- id: hvac
+  label_ru: Отопление и кондиционирование
+  hint: Монтаж, ремонт, ТО климатического оборудования
+  activity_summary: heating, ventilation, air conditioning installation, repair, and maintenance
+  tagline_candidates:
+    - "{brand_name} — HVAC installs and repairs with load calculations, not guesswork."
+    - "{brand_name} — climate control that's sized right and serviced on schedule."
+  seo_blurb: "{brand_name} provides HVAC installation, repair, and preventive maintenance for residential and commercial systems with licensed technicians."
+  hero_title: "{brand_name} — heating and cooling engineered for your building"
+  hero_subtitle: Proper load calculations, equipment matched to your space, and maintenance plans that extend system life — not just filter swaps.
+  about_page_header: About
+  about_page_sub: Licensing, training, and the engineering mindset behind our installs.
+  contact_page_header: Contact
+  contact_page_sub: Describe the issue or request a maintenance agreement — emergencies are dispatched same-day.
+  about_heading: Who we are
+  about_body: "{brand_name} sizes systems using Manual J calculations, not rules of thumb. Our technicians hold EPA certifications and ongoing manufacturer training, so diagnostics are accurate and installs meet code the first time."
+  services_heading: Our services
+  services_intro: From emergency repairs to planned replacements — climate comfort backed by engineering and responsive service.
+  service_items:
+    - title: Rooftop & packaged RTUs
+      text: Packaged units, curb adapters, economizers, and startup sheets — coordinated with building engineers and verified on first heat/cool call.
+    - title: Ductless & mini-splits
+      text: Single- and multi-zone ductless for additions, server rooms, and tight retrofits with line-set routing planned before we cut access.
+    - title: Furnace replacement
+      text: High-efficiency furnace changeouts with combustion checks, venting verification, and thermostat commissioning — not swap-and-go.
+    - title: Boiler & hydronic
+      text: Hydronic heating diagnostics, circulator and zone valve work, and seasonal safety checks on older steam and water systems.
+    - title: Heat pumps & dual-fuel
+      text: Cold-climate heat pumps, dual-fuel staging, and defrost diagnostics so backup heat only runs when it should.
+    - title: Central air & ducted splits
+      text: Coil and condenser replacements, airflow corrections, and refrigerant charge verified by superheat/subcool — not pressure-only guesses.
+  contact_teaser: Tell us your system type and what's happening — we'll schedule a visit or dispatch for emergencies.
+  contact_form_placeholder: "System type, issue description, and whether this is urgent."
+  hero_title_alt:
+    - "{brand_name} — HVAC service grounded in engineering"
+    - "{brand_name} — comfort systems installed and maintained properly"
+  hero_subtitle_alt:
+    - Licensed technicians, accurate sizing, and maintenance plans that keep systems running efficiently for years.
+
+- id: legal
+  label_ru: Юридические услуги
+  hint: Гражданское право, договоры, представительство
+  activity_summary: legal counsel, contract drafting, dispute resolution, and regulatory compliance
+  tagline_candidates:
+    - "{brand_name} — legal advice that's direct, timely, and structured around your risk."
+    - "{brand_name} — attorneys who explain the law in terms you can act on."
+  seo_blurb: "{brand_name} is a law firm offering business law, contract drafting, dispute resolution, and compliance guidance with transparent fee structures."
+  hero_title: "{brand_name} — legal counsel built around clarity and results"
+  hero_subtitle: Contract review, dispute strategy, and compliance guidance — from attorneys who communicate in plain language and bill transparently.
+  about_page_header: About the firm
+  about_page_sub: Our attorneys, practice philosophy, and how we structure engagements.
+  contact_page_header: Contact
+  contact_page_sub: Describe your matter for a confidential initial consultation.
+  about_heading: Our practice
+  about_body: "{brand_name} was founded on a simple principle: legal work should be understandable to the client paying for it. We scope matters clearly, provide fee estimates upfront, and write memos in language that helps you make decisions — not just cover liability."
+  services_heading: Practice areas
+  services_intro: Focused legal services for businesses and individuals — with clear scoping and regular status updates.
+  service_items:
+    - title: Business & contract law
+      text: Entity formation, partnership agreements, vendor contracts, and ongoing outside-counsel support.
+    - title: Dispute resolution & litigation
+      text: Pre-suit negotiation, mediation, and courtroom representation when settlement isn't the right answer.
+    - title: Regulatory & compliance
+      text: Industry-specific compliance reviews, policy drafting, and guidance for licensing and regulatory filings.
+  contact_teaser: Outline your situation briefly — all inquiries are treated as confidential.
+  contact_form_placeholder: "Nature of your legal matter and preferred contact method."
+  hero_title_alt:
+    - "{brand_name} — straightforward legal work, transparent billing"
+    - "{brand_name} — attorneys who communicate, not just litigate"
+  hero_subtitle_alt:
+    - Business law, contracts, and dispute resolution from a firm that values clarity over complexity.
+
+- id: medical
+  label_ru: Медицинская клиника
+  hint: Терапия, диагностика, узкие специалисты
+  activity_summary: primary care, diagnostics, and specialist consultations
+  tagline_candidates:
+    - "{brand_name} — patient-first medicine with coordinated care and clear communication."
+    - "{brand_name} — a clinic where your visit starts on time and your questions get answered."
+  seo_blurb: "{brand_name} is a medical clinic offering primary care, diagnostics, and specialist referrals with online booking and same-day availability."
+  hero_title: "{brand_name} — healthcare that listens, explains, and follows through"
+  hero_subtitle: Board-certified providers, in-house diagnostics, and care coordination that keeps you informed at every step — not just at discharge.
+  about_page_header: About our clinic
+  about_page_sub: Our providers, facility, and what makes our approach different.
+  contact_page_header: Contact
+  contact_page_sub: Book an appointment, request records, or ask about accepted insurance plans.
+  about_heading: Our philosophy
+  about_body: "{brand_name} operates on the belief that good medicine requires good communication. Our providers spend time explaining findings, exploring options together, and coordinating with specialists so nothing falls through the cracks between visits."
+  services_heading: Medical services
+  services_intro: Primary and preventive care under one roof — with diagnostics and referral coordination built in.
+  service_items:
+    - title: Primary care & wellness exams
+      text: Annual physicals, chronic condition management, vaccinations, and same-day sick visits.
+    - title: Diagnostics & lab work
+      text: In-house blood draws, imaging referrals, and results communicated with context — not just numbers.
+    - title: Specialist coordination
+      text: Referrals managed with shared records and follow-up so treatment plans stay aligned across providers.
+  contact_teaser: Book online or call — same-day appointments are available for urgent concerns.
+  contact_form_placeholder: "Reason for visit, preferred date, and insurance provider."
+  hero_title_alt:
+    - "{brand_name} — medicine with follow-through"
+    - "{brand_name} — your health, explained and coordinated"
+  hero_subtitle_alt:
+    - Primary care, diagnostics, and specialist referrals from a team that treats communication as part of the care plan.
+
+- id: electrical
+  label_ru: Электромонтажные работы
+  hint: Проводка, щитки, освещение, аварийный электрик
+  activity_summary: electrical installation, repair, and safety inspections for residential and commercial properties
+  tagline_candidates:
+    - "{brand_name} — licensed electricians who explain the work and respect your walls."
+    - "{brand_name} — electrical services done to code, on time, and within quote."
+  seo_blurb: "{brand_name} provides licensed electrical services including panel upgrades, wiring, lighting installation, and code-compliance inspections."
+  hero_title: "{brand_name} — electrical work done safely and to code"
+  hero_subtitle: Panel upgrades, circuit troubleshooting, and new wiring — by licensed electricians who pull permits and explain what they find.
+  about_page_header: About us
+  about_page_sub: Our licensing, safety record, and approach to every job.
+  contact_page_header: Contact
+  contact_page_sub: Describe the job or report an electrical emergency.
+  about_heading: Who we are
+  about_body: "{brand_name} employs licensed master and journeyman electricians who pull permits, follow NEC standards, and leave panels labeled. We photograph work before closing walls and explain findings so you understand your system."
+  services_heading: What we do
+  services_intro: Residential and commercial electrical — from troubleshooting a single outlet to wiring a new build.
+  service_items:
+    - title: Wiring & panel upgrades
+      text: Service panel replacements, circuit additions, and whole-house rewiring for older properties.
+    - title: Lighting & fixtures
+      text: Recessed lighting, exterior fixtures, landscape lighting, and dimmer/switch upgrades with clean finish work.
+    - title: Troubleshooting & safety inspections
+      text: Fault finding, GFCI/AFCI compliance checks, and pre-purchase electrical evaluations with written reports.
+  contact_teaser: Tell us about the job — we provide written estimates before any work begins.
+  contact_form_placeholder: "Type of work needed, property age, and any symptoms like tripping breakers."
+  hero_title_alt:
+    - "{brand_name} — licensed, permitted, and clean"
+    - "{brand_name} — electrical service with no shortcuts"
+  hero_subtitle_alt:
+    - From panel swaps to full rewires — licensed electricians who document their work and respect your home.
+
+- id: auto_repair
+  label_ru: Автосервис
+  hint: Диагностика, ТО, кузовной ремонт
+  activity_summary: automotive repair, maintenance, and diagnostics
+  tagline_candidates:
+    - "{brand_name} — honest auto repair with digital inspections you can see."
+    - "{brand_name} — mechanics who explain what's wrong before they fix it."
+  seo_blurb: "{brand_name} offers automotive diagnostics, scheduled maintenance, and repair services with transparent pricing and digital inspection reports."
+  hero_title: "{brand_name} — auto repair you can trust and verify"
+  hero_subtitle: Digital inspections, upfront estimates, and ASE-certified technicians — so you know exactly what your car needs and what it costs.
+  about_page_header: About the shop
+  about_page_sub: Our technicians, equipment, and the transparency standards we follow.
+  contact_page_header: Contact
+  contact_page_sub: Book a service appointment or describe a problem — we aim for same-week availability.
+  about_heading: How we work
+  about_body: "{brand_name} sends photo-and-video inspections to your phone before recommending any work. Our technicians hold ASE certifications, and we warranty parts and labor in writing. No upselling — just clear findings and your decision."
+  services_heading: Services
+  services_intro: From oil changes to engine diagnostics — maintenance and repair under one roof with no surprises.
+  service_items:
+    - title: Diagnostics & check-engine resolution
+      text: OBD-II scanning, electrical fault tracing, and root-cause diagnosis before recommending repairs.
+    - title: Scheduled maintenance
+      text: Oil services, brake inspections, fluid flushes, and timing-belt replacements per manufacturer intervals.
+    - title: Repair & restoration
+      text: Suspension, drivetrain, cooling systems, and engine work — with parts options and labor estimates upfront.
+  contact_teaser: Describe what your car is doing — we'll suggest the right appointment type.
+  contact_form_placeholder: "Vehicle year/make/model, mileage, and the symptom or service needed."
+  hero_title_alt:
+    - "{brand_name} — transparent auto care, certified techs"
+    - "{brand_name} — see the inspection before you approve the work"
+  hero_subtitle_alt:
+    - Digital inspections, written warranties, and technicians who explain findings in plain language.
+
+- id: real_estate
+  label_ru: Недвижимость
+  hint: Покупка, продажа, аренда, оценка
+  activity_summary: property sales, buyer representation, rentals, and market analysis
+  tagline_candidates:
+    - "{brand_name} — real estate guidance grounded in local data and honest timelines."
+    - "{brand_name} — buying and selling property with agents who know the inventory."
+  seo_blurb: "{brand_name} is a real estate agency offering buyer and seller representation, rental placement, and market analysis with local expertise."
+  hero_title: "{brand_name} — real estate decisions backed by local knowledge"
+  hero_subtitle: Buyer representation, listing strategy, and rental placement — guided by agents who know pricing history, not just listing photos.
+  about_page_header: About the agency
+  about_page_sub: Our agents, market focus, and how we advise clients.
+  contact_page_header: Contact
+  contact_page_sub: Tell us what you're looking for or what you need to sell — consultations are complimentary.
+  about_heading: Our approach
+  about_body: "{brand_name} advises clients with comparable sales data, neighborhood-level insight, and realistic timelines. We'd rather set accurate expectations upfront than chase inflated listing prices that stall on market."
+  services_heading: What we offer
+  services_intro: Full-service real estate — buying, selling, and renting with a team that knows the local market deeply.
+  service_items:
+    - title: Buyer representation
+      text: Property search, showing coordination, negotiation, and closing support — with market data backing every offer.
+    - title: Seller services & listing strategy
+      text: Comparative market analysis, staging guidance, professional photography, and pricing strategies that reflect current demand.
+    - title: Rental & property management
+      text: Tenant placement, lease drafting, and ongoing management for landlords who want reliable occupancy without the daily work.
+  contact_teaser: Whether you're buying, selling, or renting — reach out for a no-obligation conversation.
+  contact_form_placeholder: "Are you buying, selling, or renting? Share your area and timeline."
+  hero_title_alt:
+    - "{brand_name} — agents who know the comps, not just the listings"
+    - "{brand_name} — real estate counsel rooted in data"
+  hero_subtitle_alt:
+    - Local market expertise, honest pricing advice, and transaction support from first showing to closing day.
+
+- id: accounting
+  label_ru: Бухгалтерия
+  hint: Налоги, учёт, отчётность, аудит
+  activity_summary: bookkeeping, tax preparation, financial reporting, and advisory
+  tagline_candidates:
+    - "{brand_name} — accounting that keeps your books clean and your filings on time."
+    - "{brand_name} — financial clarity for businesses that outgrew spreadsheets."
+  seo_blurb: "{brand_name} provides bookkeeping, tax preparation, payroll, and financial advisory services for small businesses and individuals."
+  hero_title: "{brand_name} — books, taxes, and financial clarity on your schedule"
+  hero_subtitle: Monthly bookkeeping, tax-ready financials, and advisory conversations — from CPAs who explain the numbers in terms your business can act on.
+  about_page_header: About
+  about_page_sub: Our credentials, service philosophy, and how engagements are structured.
+  contact_page_header: Contact
+  contact_page_sub: Share your situation for a scoping conversation — initial consultations are complimentary.
+  about_heading: Our firm
+  about_body: "{brand_name} serves owner-operated businesses and growing companies that need reliable financial infrastructure without a full-time controller. We close books monthly, prepare taxes proactively, and flag issues before they become audit triggers."
+  services_heading: Services
+  services_intro: Bookkeeping, tax, and advisory services designed to give you confidence in your numbers.
+  service_items:
+    - title: Bookkeeping & reconciliation
+      text: Monthly close, bank and credit-card reconciliation, and categorization aligned with your chart of accounts.
+    - title: Tax preparation & planning
+      text: Business and individual returns, quarterly estimated payments, and year-end strategies to minimize liability legally.
+    - title: Financial reporting & advisory
+      text: Profit-and-loss reviews, cash-flow forecasting, and conversations about what the numbers mean for your next decision.
+  contact_teaser: Describe your business and current bookkeeping setup — we'll suggest the right engagement level.
+  contact_form_placeholder: "Business type, approximate revenue, and what accounting help you need."
+  hero_title_alt:
+    - "{brand_name} — CPAs who close books and explain them"
+    - "{brand_name} — accounting that keeps pace with your business"
+  hero_subtitle_alt:
+    - Monthly closes, tax-ready financials, and a CPA team that treats your books like their own.
+
+- id: pest_control
+  label_ru: Дезинсекция
+  hint: Уничтожение насекомых, грызунов, профилактика
+  activity_summary: pest elimination, prevention programs, and property inspections
+  tagline_candidates:
+    - "{brand_name} — pest control with identification first, treatment second."
+    - "{brand_name} — licensed technicians who solve pest problems at the source."
+  seo_blurb: "{brand_name} delivers residential and commercial pest control including inspection, targeted treatment, and ongoing prevention programs."
+  hero_title: "{brand_name} — pest control that identifies the problem before treating it"
+  hero_subtitle: Licensed inspections, targeted treatments, and prevention plans — because effective pest control starts with knowing exactly what you're dealing with.
+  about_page_header: About us
+  about_page_sub: Our methods, licensing, and commitment to safe, effective treatments.
+  contact_page_header: Contact
+  contact_page_sub: Describe what you're seeing — we schedule inspections promptly.
+  about_heading: Who we are
+  about_body: "{brand_name} starts every job with a thorough inspection and species identification. We use integrated pest management principles — sealing entry points, removing attractants, and applying targeted treatments — so results last longer and chemicals are used only where needed."
+  services_heading: Our services
+  services_intro: Inspection-first pest management for homes and businesses — effective treatments with minimal disruption.
+  service_items:
+    - title: Inspection & identification
+      text: Thorough property assessment, species identification, and a written treatment plan before any chemicals are applied.
+    - title: Targeted treatment
+      text: Baiting, exclusion, and application methods matched to the specific pest — from termites and roaches to rodents and wildlife.
+    - title: Prevention & monitoring
+      text: Quarterly or seasonal service plans with perimeter treatment, entry-point sealing, and ongoing monitoring to catch problems early.
+  contact_teaser: Tell us what you're seeing and where — we'll schedule an inspection and recommend next steps.
+  contact_form_placeholder: "What pests you've noticed, where in the property, and how long it's been happening."
+  hero_title_alt:
+    - "{brand_name} — inspect first, treat smart"
+    - "{brand_name} — pest solutions that last beyond the first visit"
+  hero_subtitle_alt:
+    - Licensed inspections, species-specific treatments, and prevention plans that address root causes — not just symptoms.

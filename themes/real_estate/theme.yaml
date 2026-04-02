@@ -1,0 +1,22 @@
+inject_before: contact_teaser
+index_extras:
+  - testimonials
+nav_items:
+  - { href: index.php, label: Home }
+  - { href: about.php, label: About }
+  - { href: services.php, label: Services }
+  - { href: contact.php, label: Contact us }
+brand_prefixes:
+  - Crest
+  - Harbour
+  - Maple
+  - Stone
+  - Summit
+  - Bay
+brand_suffixes:
+  - Realty
+  - Real Estate
+  - Properties
+  - Property Group
+  - Homes
+  - "& Associates"

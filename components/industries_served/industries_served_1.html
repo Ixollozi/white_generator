@@ -1,0 +1,15 @@
+<section class="block industries">
+  <div class="container">
+    <h2>{{ industries_page_header }}</h2>
+    <p class="intro">{{ industries_page_intro }}</p>
+    <div class="grid three" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:1rem;margin-top:1.25rem;">
+      {% for ind in industries_served_items %}
+      <article class="card" style="padding:1rem;border:1px solid #e5e7eb;border-radius:10px;">
+        <h3 style="margin:0 0 0.35rem;">{{ ind.name }}</h3>
+        <p style="margin:0;font-size:0.92rem;color:#475569;">{{ ind.description }}</p>
+      </article>
+      {% endfor %}
+    </div>
+    <p style="margin-top:1.25rem;"><a href="services.{{ page_extension }}">See services</a> · <a href="contact.{{ page_extension }}">Talk to us</a></p>
+  </div>
+</section>

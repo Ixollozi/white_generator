@@ -70,7 +70,24 @@ a {
 .hero p {
   margin: 0;
   opacity: 0.92;
-  max-width: 52ch;
+  max-width: 62ch;
+}
+
+.hero .inline-code {
+  font-size: 0.9em;
+  padding: 0.1em 0.35em;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.15);
+  font-family: ui-monospace, monospace;
+}
+
+.inline-code {
+  font-family: ui-monospace, monospace;
+  font-size: 0.88em;
+  padding: 0.08em 0.35em;
+  border-radius: 6px;
+  background: var(--border);
+  color: var(--text);
 }
 
 .tabs {

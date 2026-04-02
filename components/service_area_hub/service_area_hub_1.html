@@ -1,0 +1,12 @@
+<section class="block service-areas-hub">
+  <div class="container">
+    <h2>{{ service_areas_page_header }}</h2>
+    <p class="intro">{{ service_areas_page_intro }}</p>
+    <ul style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:0.5rem 1rem;list-style:none;padding:0;margin:1.25rem 0 0;">
+      {% for z in service_area_links %}
+      <li><a href="{{ z.href }}">{{ z.label }}</a></li>
+      {% endfor %}
+    </ul>
+    <p style="margin-top:1.25rem;"><a class="btn" href="contact.{{ page_extension }}">Not sure if we cover you?</a></p>
+  </div>
+</section>

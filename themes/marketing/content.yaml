@@ -1,0 +1,25 @@
+testimonials_heading: Client outcomes
+testimonial_items:
+  - quote: "Structured data fixes shipped fast — rich results improved within weeks."
+    name: "Elena M."
+    role: "E-commerce lead"
+  - quote: "They speak both editorial and engineering — rare in SEO partners."
+    name: "David P."
+    role: "CMO"
+  - quote: "Dashboards finally match what leadership cares about."
+    name: "Priya S."
+    role: "Head of growth"
+faq_heading: FAQs
+faq_items:
+  - q: "What does the first sprint include?"
+    a: "Technical audit, prioritized issues, and a shipped batch of fixes with measurement plan."
+  - q: "Do you write content?"
+    a: "Yes — briefs, rewrites, and net-new pages aligned to intent and internal linking."
+  - q: "How do you report progress?"
+    a: "Weekly notes with crawls, rankings context, and experiment outcomes."
+gallery_heading: Deliverables snapshot
+gallery_items:
+  - caption: "Schema rollout"
+  - caption: "Content hub architecture"
+  - caption: "CRO experiment board"
+services_seo_description: "{brand_name} delivers SEO, structured data, content, analytics, and CRO — with reporting tied to revenue proxies."

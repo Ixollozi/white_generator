@@ -1,0 +1,25 @@
+testimonials_heading: What facility managers say
+testimonial_items:
+  - quote: "Nightly routes are predictable — checklists and photos when we ask for them."
+    name: "Jordan Lee"
+    role: "Operations lead"
+  - quote: "We reduced complaints about restrooms within the first month."
+    name: "Samira Khan"
+    role: "Office manager"
+  - quote: "They adapt to our events calendar without breaking the SLA."
+    name: "Chris O."
+    role: "Retail GM"
+faq_heading: Common questions
+faq_items:
+  - q: "Do you bring supplies and equipment?"
+    a: "Yes — we agree on product preferences and keep consumables stocked where included in scope."
+  - q: "Can you work outside business hours?"
+    a: "We schedule deep cleans and heavy tasks during off-peak windows when possible."
+  - q: "How do you handle access and security?"
+    a: "Badged staff, named crews, and a single coordinator for schedule changes."
+gallery_heading: Recent site work
+gallery_items:
+  - caption: "Office floor nightly route"
+  - caption: "Lobby high-touch rotation"
+  - caption: "Retail back-of-house refresh"
+services_seo_description: "{brand_name} provides commercial cleaning, sanitization, and scheduled maintenance for offices and retail — with clear scopes and accountable crews."

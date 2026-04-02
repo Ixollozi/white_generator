@@ -1,0 +1,25 @@
+testimonials_heading: Member stories
+testimonial_items:
+  - quote: "Coaches actually correct form — I stopped stalling on squats."
+    name: "Taylor N."
+    role: "Member 18 mo"
+  - quote: "Small groups feel personal; floor rules keep it sane at peak hours."
+    name: "Riley D."
+    role: "Evening regular"
+  - quote: "On-ramp got me confident with barbells in three sessions."
+    name: "Jamie L."
+    role: "New member"
+faq_heading: Membership & training
+faq_items:
+  - q: "Do you offer trials?"
+    a: "Yes — ask front desk for guest pass options and coach availability."
+  - q: "Personal training?"
+    a: "Blocks and on-ramp packages; capped groups for coached sessions."
+  - q: "Equipment etiquette?"
+    a: "Rerack weights, wipe stations, respect time limits on platforms during rush."
+gallery_heading: Floor & classes
+gallery_items:
+  - caption: "Strength floor"
+  - caption: "Small-group bay"
+  - caption: "Mobility corner"
+services_seo_description: "{brand_name} offers memberships, coached groups, open gym access, and personal training focused on form and progression."

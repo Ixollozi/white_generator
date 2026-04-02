@@ -1,7 +1,17 @@
+slot: contact_block
 required_vars:
   - email
   - phone
-  - address
   - brand_name
+  - address_line1
+  - city_region_postal
+  - country
+  - hours_weekday
+  - hours_weekend
+  - hours_holiday
+  - maps_embed_url
+  - maps_search_url
 variants:
   - contact_block_1.html
+  - contact_block_2.html
+  - contact_block_3.html

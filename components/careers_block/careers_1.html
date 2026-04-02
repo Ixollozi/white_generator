@@ -1,0 +1,16 @@
+<section class="block careers">
+  <div class="container narrow">
+    <h2>{{ careers_page_header }}</h2>
+    <p>{{ careers_page_intro }}</p>
+    <div style="margin-top:1.25rem;">
+      {% for job in careers_openings %}
+      <article class="card" style="padding:1rem 1.1rem;margin-bottom:0.75rem;border:1px solid #e5e7eb;border-radius:10px;">
+        <h3 style="margin:0 0 0.25rem;">{{ job.title }}</h3>
+        <p style="margin:0 0 0.5rem;font-size:0.85rem;color:#64748b;">{{ job.location }} · {{ job.type }}</p>
+        <p style="margin:0;color:#334155;">{{ job.blurb }}</p>
+        <p style="margin:0.75rem 0 0;"><a href="contact.{{ page_extension }}?role={{ job.slug }}">Apply</a></p>
+      </article>
+      {% endfor %}
+    </div>
+  </div>
+</section>

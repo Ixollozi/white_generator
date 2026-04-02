@@ -1,0 +1,18 @@
+<section class="block services services-panels">
+  <div class="container">
+    <header>
+      <h2>{{ services_heading }}</h2>
+      <p class="intro">{{ services_intro }}</p>
+    </header>
+    <div style="display:grid;gap:1rem;">
+      {% for item in service_items %}
+      <article style="padding:1.25rem;border-radius:12px;border:1px solid #e5e7eb;background:#fafafa;">
+        <h3>{{ item.title }}</h3>
+        {% if item.price_from %}<p style="font-weight:600;color:#0f172a;margin:0 0 0.35rem;">{{ item.price_from }}</p>{% endif %}
+        <p>{{ item.text }}</p>
+        <a href="contact.{{ page_extension }}">Ask about {{ item.title }}</a>
+      </article>
+      {% endfor %}
+    </div>
+  </div>
+</section>

@@ -1,0 +1,211 @@
+<section class="block blog-index">
+
+  <div class="container narrow">
+
+    <h2>{{ blog_heading }}</h2>
+
+    <p class="intro">{{ blog_intro }}</p>
+
+  </div>
+
+
+
+  {% set is_news = (vertical_id == 'news') %}
+  {% set post_prefix = 'article-' if is_news else 'post-' %}
+
+  {% if blog_categories or trending_posts or popular_posts %}
+
+  <div class="container blog-news-layout" style="display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:1.5rem;align-items:start;">
+
+    <div class="blog-main">
+
+      {% if blog_page_groups %}
+
+        {% for group in blog_page_groups %}
+
+        <section class="blog-page-group" style="margin-bottom:2rem;">
+
+          {% for post in group %}
+
+          <article class="card blog-post" id="{{ post.anchor }}" style="margin-bottom:1.25rem;padding:1rem 1.1rem;">
+
+            <p class="meta" style="font-size:0.85rem;color:#64748b;margin:0 0 0.35rem;">
+
+              {% if post.category %}
+              <span class="pill" style="display:inline-block;background:#f1f5f9;color:#0f172a;padding:0.1rem 0.5rem;border-radius:999px;font-weight:600;">{{ post.category }}</span>
+              {% endif %}
+
+              {% if post.date %}· <time datetime="{{ post.date_iso }}">{{ post.date }}</time>{% endif %}
+
+              {% if post.author_name %}· {{ post.author_name }}{% endif %}
+
+              {% if is_news and post.read_minutes %}· {{ post.read_minutes }} min{% endif %}
+
+            </p>
+
+            <h3 style="margin:0 0 0.35rem;"><a href="{{ post_prefix }}{{ post.anchor }}.{{ page_extension }}">{{ post.title }}</a></h3>
+
+            <p class="dek" style="margin:0 0 0.5rem;color:#334155;">{{ post.dek }}</p>
+
+            <p><a class="read-more" href="{{ post_prefix }}{{ post.anchor }}.{{ page_extension }}">Read full story</a>
+              {% if is_news %}· <a href="authors.{{ page_extension }}">Staff</a>{% endif %}</p>
+
+          </article>
+
+          {% endfor %}
+
+        </section>
+
+        {% endfor %}
+
+      {% endif %}
+
+    </div>
+
+    <aside class="blog-side" style="font-size:0.95rem;" aria-label="Sections and highlights">
+
+      {% if blog_categories %}
+      <div style="border:1px solid #e5e7eb;border-radius:12px;padding:1rem;background:#fafafa;margin-bottom:1rem;">
+
+        <h3 style="margin:0 0 0.5rem;font-size:1rem;">Categories</h3>
+
+        <ul style="margin:0;padding-left:1.1rem;line-height:1.6;">
+
+          {% for c in blog_categories %}
+          <li>
+            <strong>{{ c }}</strong>
+            {% if is_news and news_category_descriptions and news_category_descriptions[c] %}
+            <div style="font-size:0.82rem;color:#64748b;margin-top:0.2rem;line-height:1.35;">{{ news_category_descriptions[c] }}</div>
+            {% endif %}
+          </li>
+          {% endfor %}
+
+        </ul>
+
+      </div>
+      {% endif %}
+
+      {% if trending_posts %}
+
+      <div style="border:1px solid #e5e7eb;border-radius:12px;padding:1rem;background:#fff;margin-bottom:1rem;">
+
+        <h3 style="margin:0 0 0.5rem;font-size:1rem;">Trending</h3>
+
+        <ol style="margin:0;padding-left:1.1rem;line-height:1.55;">
+
+          {% for t in trending_posts %}
+
+          <li><a href="{{ post_prefix }}{{ t.anchor }}.{{ page_extension }}">{{ t.title }}</a> <span style="color:#94a3b8;">({{ t.category }})</span></li>
+
+          {% endfor %}
+
+        </ol>
+
+      </div>
+
+      {% endif %}
+
+      {% if popular_posts %}
+
+      <div style="border:1px solid #e5e7eb;border-radius:12px;padding:1rem;background:#fff;">
+
+        <h3 style="margin:0 0 0.5rem;font-size:1rem;">Popular</h3>
+
+        <ul style="margin:0;padding-left:1.1rem;line-height:1.55;">
+
+          {% for p in popular_posts %}
+
+          <li><a href="{{ post_prefix }}{{ p.anchor }}.{{ page_extension }}">{{ p.title }}</a></li>
+
+          {% endfor %}
+
+        </ul>
+
+      </div>
+
+      {% endif %}
+
+    </aside>
+
+  </div>
+
+  <style>
+
+    @media (max-width: 900px) {
+
+      .blog-news-layout { grid-template-columns: 1fr !important; }
+
+    }
+
+  </style>
+
+  {% else %}
+
+
+
+  {% if blog_page_groups and blog_page_groups|length > 1 %}
+
+  <nav class="blog-pagination container" aria-label="Article pages" style="margin-bottom:1rem;">
+
+    {% for group in blog_page_groups %}
+
+    <a href="#blog-page-{{ loop.index }}" {% if loop.first %}aria-current="page"{% endif %} style="margin-right:0.6rem;">{{ loop.index }}</a>
+
+    {% endfor %}
+
+  </nav>
+
+  {% endif %}
+
+  <div class="container">
+
+    {% if blog_page_groups %}
+
+      {% for group in blog_page_groups %}
+
+      <section id="blog-page-{{ loop.index }}" class="blog-page-group" style="margin-bottom:2rem;">
+
+        {% for post in group %}
+
+        <article class="card blog-post" id="{{ post.anchor }}">
+          <p class="meta" style="font-size:0.85rem;color:#64748b;margin:0 0 0.35rem;">
+            {% if post.category %}<span class="pill" style="display:inline-block;background:#f1f5f9;color:#0f172a;padding:0.1rem 0.5rem;border-radius:999px;font-weight:600;">{{ post.category }}</span>{% endif %}
+            {% if post.date %}· <time {% if post.date_iso %}datetime="{{ post.date_iso }}"{% endif %}>{{ post.date }}</time>{% endif %}
+            {% if post.author_name %}· {{ post.author_name }}{% endif %}
+          </p>
+          <h3 style="margin:0 0 0.35rem;"><a href="{{ post_prefix }}{{ post.anchor }}.{{ page_extension }}">{{ post.title }}</a></h3>
+          <p>{{ post.excerpt }}</p>
+          <p><a class="read-more" href="{{ post_prefix }}{{ post.anchor }}.{{ page_extension }}">Read full story</a></p>
+        </article>
+
+        {% endfor %}
+
+      </section>
+
+      {% endfor %}
+
+    {% else %}
+
+      {% for post in blog_posts %}
+
+      <article class="card blog-post" id="{{ post.anchor }}">
+        <p class="meta" style="font-size:0.85rem;color:#64748b;margin:0 0 0.35rem;">
+          {% if post.category %}<span class="pill" style="display:inline-block;background:#f1f5f9;color:#0f172a;padding:0.1rem 0.5rem;border-radius:999px;font-weight:600;">{{ post.category }}</span>{% endif %}
+          {% if post.date %}· <time {% if post.date_iso %}datetime="{{ post.date_iso }}"{% endif %}>{{ post.date }}</time>{% endif %}
+          {% if post.author_name %}· {{ post.author_name }}{% endif %}
+        </p>
+        <h3 style="margin:0 0 0.35rem;"><a href="{{ post_prefix }}{{ post.anchor }}.{{ page_extension }}">{{ post.title }}</a></h3>
+        <p>{{ post.excerpt }}</p>
+        <p><a class="read-more" href="{{ post_prefix }}{{ post.anchor }}.{{ page_extension }}">Read full story</a></p>
+      </article>
+
+      {% endfor %}
+
+    {% endif %}
+
+  </div>
+
+  {% endif %}
+
+</section>
+

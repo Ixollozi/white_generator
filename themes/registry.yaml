@@ -1,0 +1,36 @@
+# Maps vertical_id (from data/verticals.yaml) to a theme pack folder under themes/<folder>/
+by_vertical_id:
+  cleaning: cleaning
+  marketing_agency: marketing
+  cafe_restaurant: restaurant
+  fitness: fitness
+  news: news
+  clothing: fashion
+  dental: dental
+  plumbing: plumbing
+  roofing: roofing
+  landscaping: landscaping
+  consulting: consulting
+  moving: moving
+  hvac: hvac
+  legal: legal
+  medical: medical
+  electrical: electrical
+  auto_repair: auto_repair
+  real_estate: real_estate
+  accounting: accounting
+  pest_control: pest_control
+  dental: dental
+  plumbing: plumbing
+  roofing: roofing
+  landscaping: landscaping
+  consulting: consulting
+  moving: moving
+  hvac: hvac
+  legal: legal
+  medical: medical
+  electrical: electrical
+  auto_repair: auto_repair
+  real_estate: real_estate
+  accounting: accounting
+  pest_control: pest_control

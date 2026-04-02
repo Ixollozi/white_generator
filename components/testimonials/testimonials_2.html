@@ -1,0 +1,14 @@
+<section class="block testimonials testimonials--stack">
+  <div class="container narrow">
+    <h2>{{ testimonials_heading }}</h2>
+    <ul class="testimonial-list">
+      {% for t in testimonial_items %}
+      <li class="testimonial-row">
+        {% if t.rating %}<p class="stars" style="letter-spacing:0.08em;">{{ t.rating }}</p>{% endif %}
+        <p class="quote">“{{ t.quote }}”</p>
+        <p class="attr"><span class="name">{{ t.name }}</span>, {{ t.role }}</p>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+</section>

@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  ARTICLE_KINDS,
+  ARTICLE_KIND_LABELS_RU,
+  NEWS_BLUEPRINT_SLOTS,
+  NEWS_CATEGORIES,
+  NEWS_CATEGORY_LABELS_RU,
+} from "./newsMixConfig";
+import {
   deleteSite,
   deleteImagePack,
   fetchJob,
@@ -8,6 +15,7 @@ import {
   fetchSites,
   fetchTemplates,
   fetchThemes,
+  fetchVerticals,
   previewUrl,
   startGenerate,
   uploadImages,
@@ -18,6 +26,7 @@ import {
   type AssetPackSummary,
   type SiteSummary,
   type TemplateInfo,
+  type VerticalInfo,
 } from "./api";
 
 type Tab = "generate" | "outputs" | "history";
@@ -35,9 +44,12 @@ const JUNK_LABELS: Record<string, string> = {
 };
 
 const JUNK_HINTS: Record<string, string> = {
-  "privacy-policy": "Добавит отдельную страницу «Политика конфиденциальности». Нужна почти на любом сайте, чтобы было понятно, как обрабатываются данные.",
-  "terms-of-service": "Добавит страницу «Условия использования». Это правила пользования сайтом (часто требуется для юридической чистоты).",
-  "cookie-policy": "Добавит страницу про cookie (файлы, которые сайт может сохранять в браузере). Часто требуется для соответствия правилам/проверкам.",
+  "privacy-policy":
+    "Отдельный URL privacy-policy.php: развёрнутый HTML-текст с разделами (scope, retention и т.д.), привязанный к нише; в head — canonical и JSON-LD как на основных страницах.",
+  "terms-of-service":
+    "terms-of-service.php — условия использования сайта; тот же формат полноценной служебной страницы.",
+  "cookie-policy":
+    "cookie-policy.php — описание cookie/аналитики в том же стиле; попадает в sitemap при включённой карте сайта.",
 };
 
 const JOB_STATUS_RU: Record<string, string> = {
@@ -53,13 +65,15 @@ function jobStatusRu(status: string): string {
 
 function templateHint(folder: string, label?: string | null): string {
   const key = (folder || "").toLowerCase();
+  const common =
+    " Страницы: главная (секции можно перемешивать), о нас, услуги, блог, FAQ, контакты; политики и 404 — в блоке «Шум»; на страницах — canonical, Open Graph и JSON-LD.";
   if (key.includes("reference"))
-    return "Это демонстрационный шаблон-пример. Подходит, чтобы посмотреть, как выглядит структура сайта и как работают блоки.";
+    return "Демо-шаблон с компонентом nav_bar. Удобно смотреть все блоки." + common;
   if (key.includes("corporate"))
-    return "Обычный «корпоративный» шаблон. Подойдёт для большинства ниш: главная, о нас, услуги, контакты.";
+    return "Корпоративный многостраничный шаблон, меню подстраивается под выбранную нишу (пакет themes/)." + common;
   if (key.includes("minimal"))
-    return "Очень простой шаблон без лишнего. Подойдёт, если нужен максимально лёгкий и быстрый вариант.";
-  return label ? `Шаблон: ${label}. Выберите, если хотите сгенерировать сайт в этом стиле.` : "Выберите шаблон — это внешний вид и структура будущего сайта.";
+    return "Та же логика страниц, что у corporate, но более простая подача в стилях." + common;
+  return label ? `Шаблон: ${label}.` + common : "Внешний вид и каркас HTML." + common;
 }
 
 export default function App() {
@@ -74,6 +88,7 @@ export default function App() {
   };
 
   const [templates, setTemplates] = useState<TemplateInfo[]>([]);
+  const [verticals, setVerticals] = useState<VerticalInfo[]>([]);
   const [themes, setThemes] = useState<string[]>([]);
   const [selectedTemplates, setSelectedTemplates] = useState<Set<string>>(new Set(["corporate_v1"]));
   const [count, setCount] = useState(1);
@@ -81,8 +96,10 @@ export default function App() {
   const [seed, setSeed] = useState<string>("");
   const [theme, setTheme] = useState("default");
   const [siteName, setSiteName] = useState("");
+  const [verticalId, setVerticalId] = useState("");
   const [strict, setStrict] = useState(false);
   const [zipEach, setZipEach] = useState(false);
+  const [writeBuildManifest, setWriteBuildManifest] = useState(false);
   const [seoSitemap, setSeoSitemap] = useState(true);
   const [seoRobots, setSeoRobots] = useState(true);
   const [seoKeywords, setSeoKeywords] = useState(false);
@@ -105,6 +122,20 @@ export default function App() {
   const [activePack, setActivePack] = useState<AssetPackDetails | null>(null);
   const [activePackLoading, setActivePackLoading] = useState(false);
   const [offerLink, setOfferLink] = useState("");
+  const [geoProfileId, setGeoProfileId] = useState("");
+  const [imageSource, setImageSource] = useState("");
+  const [newsArticleCount, setNewsArticleCount] = useState("");
+  const [newsDefaultKind, setNewsDefaultKind] = useState("");
+  type NewsMixSource = "auto" | "form" | "json";
+  const emptyNewsCategoryKinds = () =>
+    Object.fromEntries(NEWS_CATEGORIES.map((c) => [c, ""])) as Record<string, string>;
+  const [newsMixSource, setNewsMixSource] = useState<NewsMixSource>("auto");
+  const [newsCategoryKinds, setNewsCategoryKinds] = useState<Record<string, string>>(() => emptyNewsCategoryKinds());
+  const [newsShowPerArticle, setNewsShowPerArticle] = useState(false);
+  const [newsSlotKinds, setNewsSlotKinds] = useState<string[]>(() =>
+    Array(NEWS_BLUEPRINT_SLOTS.length).fill(""),
+  );
+  const [newsStyleMixJson, setNewsStyleMixJson] = useState("");
 
   const [job, setJob] = useState<JobStatus | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -118,6 +149,14 @@ export default function App() {
       setTemplates(t);
     } catch (e) {
       showToast(e instanceof Error ? e.message : "Не удалось загрузить шаблоны", true);
+    }
+  }, []);
+
+  const loadVerticalsCatalog = useCallback(async () => {
+    try {
+      setVerticals(await fetchVerticals());
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : "Не удалось загрузить тематики (вертикали)", true);
     }
   }, []);
 
@@ -188,8 +227,9 @@ export default function App() {
 
   useEffect(() => {
     void loadTemplates();
+    void loadVerticalsCatalog();
     void loadThemes();
-  }, [loadTemplates, loadThemes]);
+  }, [loadTemplates, loadVerticalsCatalog, loadThemes]);
 
   useEffect(() => {
     if (tab === "outputs") void loadSites();
@@ -223,6 +263,57 @@ export default function App() {
     });
   };
 
+  const newsSlotsCount = useMemo(() => {
+    const t = newsArticleCount.trim();
+    if (t === "") return NEWS_BLUEPRINT_SLOTS.length;
+    const n = Number(t);
+    if (!Number.isFinite(n) || n < 1) return NEWS_BLUEPRINT_SLOTS.length;
+    return Math.min(80, Math.floor(n));
+  }, [newsArticleCount]);
+
+  useEffect(() => {
+    setNewsSlotKinds((prev) => {
+      const next = Array(newsSlotsCount).fill("") as string[];
+      for (let i = 0; i < Math.min(prev.length, next.length); i++) {
+        next[i] = prev[i] ?? "";
+      }
+      return next;
+    });
+  }, [newsSlotsCount]);
+
+  const newsStyleMixParsed = useMemo(() => {
+    if (newsMixSource === "auto") return undefined;
+    if (newsMixSource === "json") {
+      const t = newsStyleMixJson.trim();
+      if (!t) return undefined;
+      try {
+        const o = JSON.parse(t) as unknown;
+        if (!o || typeof o !== "object" || Array.isArray(o)) return undefined;
+        return Object.fromEntries(
+          Object.entries(o as Record<string, unknown>).map(([k, v]) => [String(k), String(v)])
+        ) as Record<string, string>;
+      } catch {
+        return undefined;
+      }
+    }
+    const allowed = new Set<string>([...ARTICLE_KINDS]);
+    const out: Record<string, string> = {};
+    for (const c of NEWS_CATEGORIES) {
+      const v = (newsCategoryKinds[c] ?? "").trim().toLowerCase();
+      if (v && allowed.has(v)) out[c] = v;
+    }
+    if (newsShowPerArticle) {
+      newsSlotKinds.forEach((raw, i) => {
+        const v = (raw ?? "").trim().toLowerCase();
+        if (v && allowed.has(v)) out[String(i)] = v;
+      });
+    }
+    return Object.keys(out).length ? out : undefined;
+  }, [newsMixSource, newsStyleMixJson, newsCategoryKinds, newsSlotKinds, newsShowPerArticle]);
+
+  const newsJsonInvalid =
+    newsMixSource === "json" && newsStyleMixJson.trim() !== "" && newsStyleMixParsed === undefined;
+
   const toggleJunk = (key: string) => {
     setJunk((prev) => {
       const n = new Set(prev);
@@ -239,6 +330,7 @@ export default function App() {
       pages: null,
       base_url: baseUrl,
       site_name: siteName.trim() ? siteName.trim() : null,
+      vertical: verticalId.trim() ? verticalId.trim() : null,
       theme,
       seed: seed.trim() === "" ? null : Number(seed),
       strict_components: strict,
@@ -246,6 +338,7 @@ export default function App() {
         domain_mode: domainMode,
         tlds: ["com", "net", "org"],
         custom_domain: domainMode === "custom" ? (customDomain.trim() ? customDomain.trim() : null) : null,
+        ...(geoProfileId.trim() ? { geo_profile_id: geoProfileId.trim() } : {}),
       },
       seo: { generate_sitemap: seoSitemap, generate_robots: seoRobots, generate_keywords: seoKeywords },
       noise: {
@@ -264,15 +357,23 @@ export default function App() {
           .filter(Boolean),
         asset_pack_id: imagesAssetPackId.trim() ? imagesAssetPackId.trim() : null,
         count: imagesMode === "upload" ? 0 : imagesCount,
+        ...(imageSource.trim() ? { image_source: imageSource.trim() } : {}),
       },
       integrations: { offer_link: offerLink },
       zip_each_site: zipEach,
+      write_build_manifest: writeBuildManifest,
+      ...(newsArticleCount.trim() !== "" && !Number.isNaN(Number(newsArticleCount))
+        ? { news_article_count: Math.min(80, Math.max(1, Math.floor(Number(newsArticleCount)))) }
+        : {}),
+      ...(newsDefaultKind.trim() ? { news_default_article_kind: newsDefaultKind.trim() } : {}),
+      ...(newsStyleMixParsed ? { news_style_mix: newsStyleMixParsed } : {}),
     }),
     [
       count,
       selectedTemplates,
       baseUrl,
       siteName,
+      verticalId,
       theme,
       seed,
       strict,
@@ -294,6 +395,12 @@ export default function App() {
       imagesUploadFiles,
       offerLink,
       zipEach,
+      writeBuildManifest,
+      geoProfileId,
+      imageSource,
+      newsArticleCount,
+      newsDefaultKind,
+      newsStyleMixParsed,
     ]
   );
 
@@ -371,8 +478,9 @@ export default function App() {
       <header className="hero">
         <h1>Генератор вайтов</h1>
         <p>
-          Пакетная сборка PHP-лендингов из шаблонов и блоков. Настройте SEO, шум и seed — архивы забирайте
-          на вкладке «Результаты».
+          Многостраничные PHP-сайты из компонентов: ниша (вертикаль + пакет <code className="inline-code">themes/</code>),
+          блог и FAQ, отзывы и блоки на главной, юридические страницы, sitemap/robots. Базовый URL задаёт canonical и
+          Open Graph. Результаты и zip — на вкладке «Результаты».
         </p>
       </header>
 
@@ -454,7 +562,15 @@ export default function App() {
               </div>
               <div className="field">
                 <label htmlFor="base">Базовый URL</label>
-                <input id="base" value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} />
+                <input
+                  id="base"
+                  value={baseUrl}
+                  onChange={(e) => setBaseUrl(e.target.value)}
+                  title="Домен без завершающего слэша. Используется в sitemap, robots и в canonical / Open Graph на каждой странице."
+                />
+                <p className="muted" style={{ marginTop: "0.35rem", marginBottom: 0 }}>
+                  Нужен реальный домен при выкладке — от него строятся абсолютные canonical и og:url.
+                </p>
               </div>
               <div className="field">
                 <label htmlFor="theme">Тема оформления</label>
@@ -487,6 +603,26 @@ export default function App() {
                   onChange={(e) => setSiteName(e.target.value)}
                 />
               </div>
+              <div className="field" style={{ gridColumn: "1 / -1" }}>
+                <label htmlFor="vertical">Тематика вайта (ниша)</label>
+                <select
+                  id="vertical"
+                  value={verticalId}
+                  onChange={(e) => setVerticalId(e.target.value)}
+                  title="Вертикаль из data/verticals.yaml и каталога themes/: меню, брендовые префиксы, отзывы, FAQ и галерея на главной, тексты блога; политики привязаны к описанию деятельности."
+                >
+                  <option value="">Случайная из списка</option>
+                  {verticals.map((v) => (
+                    <option key={v.id} value={v.id} title={v.hint ?? undefined}>
+                      {v.label_ru}
+                    </option>
+                  ))}
+                </select>
+                <p className="muted" style={{ marginTop: "0.35rem", marginBottom: 0 }}>
+                  К одной нише привязаны копирайт, услуги, контакты в подвале, пункты меню («Menu» для ресторана и т.д.),
+                  секции на главной и тип Organization в JSON-LD. Пустое значение — случайная ниша на каждый сайт.
+                </p>
+              </div>
             </div>
             <label
               className="template-chip"
@@ -504,10 +640,30 @@ export default function App() {
               <input type="checkbox" checked={zipEach} onChange={() => setZipEach((z) => !z)} />
               <span>Архивировать каждый сайт (zip)</span>
             </label>
+            <label
+              className="template-chip"
+              style={{ marginLeft: "0.5rem" }}
+              title="По умолчанию build-manifest.json не пишется в папку сайта (безопаснее для публичного деплоя). Включите для отладки."
+            >
+              <input
+                type="checkbox"
+                checked={writeBuildManifest}
+                onChange={() => setWriteBuildManifest((v) => !v)}
+              />
+              <span>Сохранять build-manifest.json</span>
+            </label>
           </section>
 
           <section className="card">
             <h2>SEO</h2>
+            <p className="muted" style={{ marginTop: 0, marginBottom: "0.75rem" }}>
+              Для каждой страницы генерируются уникальные title и meta description; в{" "}
+              <code className="inline-code" style={{ fontSize: "0.9em" }}>
+                &lt;head&gt;
+              </code>{" "}
+              добавляются canonical, Open Graph / Twitter, JSON-LD (Organization / LocalBusiness по нише). Эти поля не
+              отключаются отдельным переключателем — включены в шаблоны разметки.
+            </p>
             <label className="template-chip" title="Добавит файл sitemap.xml — это список всех страниц сайта для поисковиков (чтобы им проще было «увидеть» страницы).">
               <input type="checkbox" checked={seoSitemap} onChange={() => setSeoSitemap((v) => !v)} />
               <span>Карта сайта (sitemap)</span>
@@ -555,6 +711,213 @@ export default function App() {
           </section>
 
           <section className="card">
+            <h2>Локаль и новости (опционально)</h2>
+            <p className="muted" style={{ marginTop: 0 }}>
+              Для вертикали <code className="inline-code">news</code>: язык бренда, авторов, юридических страниц; лимит статей и
+              смешение форматов (news / analysis / column). Поля ниже безопасно игнорируются для других ниш.
+            </p>
+            <div className="grid2">
+              <div className="field">
+                <label htmlFor="geoProfile">Geo profile (язык)</label>
+                <select id="geoProfile" value={geoProfileId} onChange={(e) => setGeoProfileId(e.target.value)}>
+                  <option value="">по умолчанию (en)</option>
+                  <option value="en">en</option>
+                  <option value="fr">fr</option>
+                  <option value="es">es</option>
+                </select>
+              </div>
+              <div className="field">
+                <label htmlFor="newsCount">Число новостных статей (макс.)</label>
+                <input
+                  id="newsCount"
+                  type="number"
+                  min={1}
+                  max={80}
+                  placeholder="все из плана"
+                  value={newsArticleCount}
+                  onChange={(e) => setNewsArticleCount(e.target.value)}
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="newsKind">Тип статей по умолчанию</label>
+                <select id="newsKind" value={newsDefaultKind} onChange={(e) => setNewsDefaultKind(e.target.value)}>
+                  <option value="">циклически (news → analysis → column)</option>
+                  <option value="news">все как новость</option>
+                  <option value="analysis">все как разбор</option>
+                  <option value="column">все как колонку</option>
+                </select>
+              </div>
+              <div className="field" style={{ gridColumn: "1 / -1" }}>
+                <strong id="newsMixModeLabel" style={{ display: "block", marginBottom: "0.15rem" }}>
+                  Форматы статей (тип текста)
+                </strong>
+                <p className="muted" style={{ margin: "0.25rem 0 0.6rem", fontSize: "0.9rem" }}>
+                  Только для <code className="inline-code">news</code>. Можно не трогать — тогда работает «по умолчанию»
+                  выше. Если настроить: сначала рубрика, а номер статьи (если включите) перебивает рубрику для этой
+                  позиции.
+                </p>
+                <div role="radiogroup" aria-labelledby="newsMixModeLabel" style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem", marginBottom: "0.75rem" }}>
+                  <label className="template-chip" style={{ cursor: "pointer" }}>
+                    <input
+                      type="radio"
+                      name="newsMixSrc"
+                      checked={newsMixSource === "auto"}
+                      onChange={() => setNewsMixSource("auto")}
+                    />
+                    <span>Авто (не задавать)</span>
+                  </label>
+                  <label className="template-chip" style={{ cursor: "pointer" }}>
+                    <input
+                      type="radio"
+                      name="newsMixSrc"
+                      checked={newsMixSource === "form"}
+                      onChange={() => setNewsMixSource("form")}
+                    />
+                    <span>Настроить формой</span>
+                  </label>
+                  <label className="template-chip" style={{ cursor: "pointer" }}>
+                    <input
+                      type="radio"
+                      name="newsMixSrc"
+                      checked={newsMixSource === "json"}
+                      onChange={() => setNewsMixSource("json")}
+                    />
+                    <span>JSON (для опытных)</span>
+                  </label>
+                </div>
+                {newsMixSource === "form" ? (
+                  <div className="news-mix-form">
+                    <div className="grid2" style={{ marginBottom: "0.75rem" }}>
+                      {NEWS_CATEGORIES.map((cat) => (
+                        <div className="field" key={cat}>
+                          <label htmlFor={`newsCat-${cat}`}>{NEWS_CATEGORY_LABELS_RU[cat]} ({cat})</label>
+                          <select
+                            id={`newsCat-${cat}`}
+                            value={newsCategoryKinds[cat] ?? ""}
+                            onChange={(e) =>
+                              setNewsCategoryKinds((prev) => ({ ...prev, [cat]: e.target.value }))
+                            }
+                          >
+                            <option value="">не переопределять</option>
+                            {ARTICLE_KINDS.map((k) => (
+                              <option key={k} value={k}>
+                                {ARTICLE_KIND_LABELS_RU[k]} ({k})
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      ))}
+                    </div>
+                    <label className="template-chip" style={{ display: "inline-flex", marginBottom: "0.5rem" }}>
+                      <input
+                        type="checkbox"
+                        checked={newsShowPerArticle}
+                        onChange={() => setNewsShowPerArticle((v) => !v)}
+                      />
+                      <span>Уточнить по номеру статьи (перебивает рубрику для выбранных номеров)</span>
+                    </label>
+                    {newsShowPerArticle ? (
+                      <div
+                        style={{
+                          maxHeight: "min(52vh, 420px)",
+                          overflowY: "auto",
+                          border: "1px solid var(--border, #e5e7eb)",
+                          borderRadius: "8px",
+                          padding: "0.5rem 0.75rem",
+                        }}
+                      >
+                        <p className="muted" style={{ margin: "0 0 0.5rem", fontSize: "0.85rem" }}>
+                          Показано статей: {newsSlotsCount} (как в поле «Число новостных статей» или весь план по умолчанию).
+                        </p>
+                        {Array.from({ length: newsSlotsCount }, (_, i) => {
+                          const meta = NEWS_BLUEPRINT_SLOTS[i];
+                          const catLabel = meta?.category
+                            ? `${NEWS_CATEGORY_LABELS_RU[meta.category]} (${meta.category})`
+                            : "позиция в плане";
+                          const hint =
+                            meta?.titleHint ??
+                            `Статья ${i + 1}: заголовок задаётся при генерации (слотов больше, чем встроенного превью).`;
+                          return (
+                            <div
+                              key={i}
+                              className="field"
+                              style={{
+                                display: "grid",
+                                gridTemplateColumns: "minmax(0, 2fr) minmax(140px, 1fr)",
+                                gap: "0.5rem",
+                                alignItems: "end",
+                                marginBottom: "0.45rem",
+                              }}
+                            >
+                              <div>
+                                <label htmlFor={`newsSlot-${i}`} style={{ fontSize: "0.8rem" }} className="muted">
+                                  №{i + 1} · {catLabel}
+                                </label>
+                                <div style={{ fontSize: "0.82rem", lineHeight: 1.25 }} title={hint}>
+                                  {hint}
+                                </div>
+                              </div>
+                              <select
+                                id={`newsSlot-${i}`}
+                                value={newsSlotKinds[i] ?? ""}
+                                onChange={(e) => {
+                                  const v = e.target.value;
+                                  setNewsSlotKinds((prev) => {
+                                    const next = [...prev];
+                                    next[i] = v;
+                                    return next;
+                                  });
+                                }}
+                              >
+                                <option value="">как рубрика</option>
+                                {ARTICLE_KINDS.map((k) => (
+                                  <option key={k} value={k}>
+                                    {ARTICLE_KIND_LABELS_RU[k]}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : null}
+                    <div style={{ marginTop: "0.65rem", display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+                      <button
+                        type="button"
+                        className="btn-secondary"
+                        onClick={() => {
+                          setNewsCategoryKinds(emptyNewsCategoryKinds());
+                          setNewsSlotKinds((a) => a.map(() => ""));
+                        }}
+                      >
+                        Сбросить форму
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+                {newsMixSource === "json" ? (
+                  <div>
+                    <label htmlFor="newsMix">JSON-объект переопределений</label>
+                    <textarea
+                      id="newsMix"
+                      rows={4}
+                      placeholder='{"Technology":"column","0":"news"}'
+                      value={newsStyleMixJson}
+                      onChange={(e) => setNewsStyleMixJson(e.target.value)}
+                      style={{ width: "100%", fontFamily: "monospace", fontSize: "0.9rem", marginTop: "0.25rem" }}
+                    />
+                    {newsJsonInvalid ? (
+                      <p className="muted" style={{ color: "#b91c1c", margin: "0.35rem 0 0", fontSize: "0.88rem" }}>
+                        JSON с ошибкой — переопределения не применятся. Проверьте скобки и кавычки.
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          </section>
+
+          <section className="card">
             <h2>Шум</h2>
             <div className="grid2">
               <div className="field">
@@ -581,7 +944,7 @@ export default function App() {
               </div>
             </div>
             <p className="muted" style={{ margin: "0.5rem 0" }}>
-              Служебные страницы
+              Служебные страницы (плюс 404.php с noindex — всегда в сборке)
             </p>
             <div className="template-grid">
               {JUNK_OPTIONS.map((j) => (
@@ -606,7 +969,7 @@ export default function App() {
               <label
                 className="template-chip"
                 style={{ marginLeft: "0.5rem" }}
-                title="Случайно меняет названия CSS-классов в HTML (внешний вид останется, но код будет выглядеть иначе)."
+                title="Постобработка HTML в runner: ко всем class= добавляется префикс (std/short/bem), согласованный на весь сайт."
               >
                 <input
                   type="checkbox"
@@ -618,7 +981,7 @@ export default function App() {
               <label
                 className="template-chip"
                 style={{ marginLeft: "0.5rem" }}
-                title="Случайно меняет значения id в HTML (чтобы сайты меньше совпадали по коду)."
+                title="Постобработка HTML в runner: префикс к id и правка href=#якоря; cookie-banner id остаются без изменений."
               >
                 <input
                   type="checkbox"
@@ -643,6 +1006,17 @@ export default function App() {
                   <option value="none">none</option>
                   <option value="web">web (скачать)</option>
                   <option value="upload">upload (свои)</option>
+                </select>
+              </div>
+              <div className="field">
+                <label htmlFor="imgSource">Источник hero/постов</label>
+                <select id="imgSource" value={imageSource} onChange={(e) => setImageSource(e.target.value)}>
+                  <option value="">авто (локальные placeholder; pack при upload)</option>
+                  <option value="picsum">picsum</option>
+                  <option value="placeholder">placeholder (PIL)</option>
+                  <option value="pack">pack (нужен asset pack)</option>
+                  <option value="unsplash">unsplash (UNSPLASH_ACCESS_KEY)</option>
+                  <option value="wikimedia">wikimedia (Commons API)</option>
                 </select>
               </div>
               {imagesMode !== "upload" && (
@@ -889,8 +1263,10 @@ export default function App() {
                   <tr>
                     <th>Папка</th>
                     <th>Бренд</th>
+                    <th>Ниша</th>
+                    <th>Тема (themes/)</th>
                     <th>Шаблон</th>
-                    <th>Архив</th>
+                    <th>Действия</th>
                     <th>Путь</th>
                   </tr>
                 </thead>
@@ -899,6 +1275,10 @@ export default function App() {
                     <tr key={s.name}>
                       <td>{s.name}</td>
                       <td>{s.brand_name || "—"}</td>
+                      <td title={s.vertical_id || undefined}>{s.vertical_id || "—"}</td>
+                      <td className="muted" title={s.theme_pack_folder || undefined}>
+                        {s.theme_pack_folder || "—"}
+                      </td>
                       <td>{s.template_id || "—"}</td>
                       <td>
                         <span className="row-actions">

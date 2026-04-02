@@ -1,0 +1,25 @@
+testimonials_heading: What clients say
+testimonial_items:
+  - quote: "They walked the property before quoting and actually knew the plant varieties."
+    name: "Patricia H."
+    role: "Homeowner"
+  - quote: "Our commercial property has never looked better. Consistent every week."
+    name: "Daniel S."
+    role: "Property manager"
+  - quote: "The patio design exceeded expectations — proper drainage and everything."
+    name: "Michelle A."
+    role: "Homeowner"
+faq_heading: Common questions
+faq_items:
+  - q: "Do you work in winter?"
+    a: "We offer snow removal and winter planning. Design-build projects run March through November in most climates."
+  - q: "Can you maintain what another company installed?"
+    a: "Yes — we'll assess the existing landscape and build a maintenance plan around it."
+  - q: "Do you handle irrigation?"
+    a: "We design and install irrigation systems and include them in seasonal startup/shutdown services."
+gallery_heading: Project gallery
+gallery_items:
+  - caption: "Backyard patio installation"
+  - caption: "Commercial property seasonal planting"
+  - caption: "Retaining wall and grading"
+services_seo_description: "{brand_name} offers landscape design, hardscaping, and seasonal lawn maintenance for residential and commercial properties."

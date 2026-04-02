@@ -1,0 +1,9 @@
+slot: process_steps
+required_vars:
+  - page_extension
+  - process_page_header
+  - process_page_intro
+  - process_steps_items
+variants:
+  - process_steps_1.html
+  - process_steps_2.html

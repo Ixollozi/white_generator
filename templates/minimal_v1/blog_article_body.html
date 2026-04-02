@@ -1,0 +1,52 @@
+<article class="container narrow long-form" itemscope itemtype="https://schema.org/BlogPosting">
+  <header class="article-head">
+    <p class="meta art-meta">
+      {% if post.category %}<span class="pill">{{ post.category }}</span>{% endif %}
+      {% if post.date %}· <time itemprop="datePublished" datetime="{{ post.date_iso }}">{{ post.date }}</time>{% endif %}
+      {% if post.author_name %}· <span itemprop="author" itemscope itemtype="https://schema.org/Person"><span itemprop="name">{{ post.author_name }}</span></span>{% endif %}
+    </p>
+    <h1 itemprop="headline">{{ post.title }}</h1>
+    {% if post.dek %}<p class="dek" itemprop="description">{{ post.dek }}</p>{% endif %}
+  </header>
+  {% if post.post_image_src %}
+  <figure class="art-hero-fig">
+    <img src="{{ post.post_image_src }}" alt="" width="1200" height="675" loading="eager" decoding="async" fetchpriority="high">
+  </figure>
+  {% endif %}
+  <div class="article-body" itemprop="articleBody">
+    {% for sec in post.article_sections_html %}
+      {% if sec.heading %}<h2>{{ sec.heading }}</h2>{% endif %}
+      {% for ph in sec.paragraphs_html %}{{ ph | safe }}{% endfor %}
+    {% endfor %}
+  </div>
+  {% if post.sources %}
+  <section class="sources-block" aria-labelledby="src-h">
+    <h2 id="src-h">Sources</h2>
+    <ul class="sources-list">
+      {% for s in post.sources %}
+      <li><a href="{{ s.url }}" rel="noopener noreferrer" target="_blank">{{ s.title }}</a> — {{ s.org }}</li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+  {% if post.related_posts %}
+  <section class="related-posts" aria-labelledby="rel-h" style="margin-top:1.5rem;padding:1rem;border:1px solid #e5e7eb;border-radius:12px;background:#fafafa;">
+    <h2 id="rel-h" style="font-size:1rem;margin:0 0 0.75rem;">Related posts</h2>
+    <ul style="margin:0;padding-left:1.1rem;line-height:1.55;">
+      {% for rp in post.related_posts %}
+      <li><a href="post-{{ rp.anchor }}.{{ page_extension }}">{{ rp.title }}</a></li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+  <nav aria-label="Explore" style="margin:1.25rem 0;padding:1rem;border:1px solid #e5e7eb;border-radius:12px;background:#fafafa;">
+    <p style="margin:0 0 0.75rem;font-weight:600;">Want to learn more about {{ brand_name }}?</p>
+    <p style="margin:0;display:flex;flex-wrap:wrap;gap:0.6rem;">
+      <a class="btn" href="services.{{ page_extension }}">Our services</a>
+      <a class="btn" href="contact.{{ page_extension }}">Get in touch</a>
+      <a class="btn" href="faq.{{ page_extension }}">Common questions</a>
+    </p>
+  </nav>
+  <p class="back-row"><a href="blog.{{ page_extension }}">← Back to blog</a></p>
+</article>
+

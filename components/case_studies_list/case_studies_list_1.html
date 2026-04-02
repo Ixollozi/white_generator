@@ -1,0 +1,22 @@
+<section class="block case-studies-index">
+  <div class="container narrow">
+    <h2>{{ case_studies_page_header }}</h2>
+    <p>{{ case_studies_page_intro }}</p>
+    <ul style="list-style:none;padding:0;margin:1.25rem 0 0;">
+      {% for cs in case_studies %}
+      <li style="margin-bottom:1.25rem;padding-bottom:1.25rem;border-bottom:1px solid #e5e7eb;">
+        <h3 style="margin:0 0 0.35rem;"><a href="case-study-{{ cs.slug }}.{{ page_extension }}">{{ cs.title }}</a></h3>
+        {% if cs.client_type or cs.district or cs.duration %}
+        <p style="margin:0.2rem 0 0;font-size:0.82rem;color:#64748b;">
+          {% if cs.client_type %}{{ cs.client_type }}{% endif %}
+          {% if cs.district %} · {{ cs.district }}{% endif %}
+          {% if cs.duration %} · {{ cs.duration }}{% endif %}
+        </p>
+        {% endif %}
+        <p style="margin:0;color:#475569;font-size:0.95rem;">{{ cs.summary }}</p>
+        <p style="margin:0.5rem 0 0;font-size:0.85rem;color:#64748b;">{{ cs.client_label }}</p>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+</section>

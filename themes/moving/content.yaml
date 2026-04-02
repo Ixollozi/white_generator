@@ -1,0 +1,20 @@
+testimonials_heading: What clients say about their move
+testimonial_items:
+  - quote: "Everything arrived in the same condition it left. The crew was careful and fast."
+    name: "Jennifer K."
+    role: "Residential move"
+  - quote: "Office was fully operational Monday morning after a weekend move. Impressive."
+    name: "Greg W."
+    role: "Office manager"
+  - quote: "Binding estimate — no surprises on move day. That alone sets them apart."
+    name: "Sandra L."
+    role: "Apartment move"
+faq_heading: Moving questions
+faq_items:
+  - q: "How far in advance should I book?"
+    a: "Two to four weeks is ideal, but we accommodate shorter timelines when crew availability allows."
+  - q: "Do you move pianos and specialty items?"
+    a: "Yes — we have equipment and trained crew members for pianos, safes, and oversized furniture."
+  - q: "Is my stuff insured during the move?"
+    a: "We carry cargo insurance and offer additional valuation coverage at booking."
+services_seo_description: "{brand_name} provides insured residential and commercial moving services with binding estimates, professional packing, and careful handling."

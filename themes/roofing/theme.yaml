@@ -1,0 +1,23 @@
+inject_before: contact_teaser
+index_extras:
+  - testimonials
+  - gallery_section
+nav_items:
+  - { href: index.php, label: Home }
+  - { href: about.php, label: About }
+  - { href: services.php, label: Services }
+  - { href: contact.php, label: Free inspection }
+brand_prefixes:
+  - Summit
+  - Cedar
+  - Stone
+  - Ridge
+  - Peak
+  - Iron
+brand_suffixes:
+  - Roofing
+  - Roofing Co.
+  - Roof Systems
+  - Roofing & Siding
+  - Roof Pros
+  - Exteriors

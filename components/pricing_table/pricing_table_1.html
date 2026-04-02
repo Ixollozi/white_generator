@@ -1,0 +1,19 @@
+<section class="block pricing-block">
+  <div class="container narrow">
+    <h2>{{ pricing_page_header }}</h2>
+    <p class="intro">{{ pricing_page_intro }}</p>
+    <div class="pricing-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;margin-top:1.25rem;">
+      {% for tier in pricing_tiers %}
+      <article class="card" style="border:1px solid #e5e7eb;border-radius:12px;padding:1.1rem;">
+        <h3 style="margin:0 0 0.35rem;">{{ tier.name }}</h3>
+        <p style="font-size:1.25rem;font-weight:700;margin:0 0 0.5rem;">{{ tier.price_hint }}</p>
+        <p style="margin:0 0 0.75rem;color:#475569;font-size:0.95rem;">{{ tier.blurb }}</p>
+        <ul style="margin:0;padding-left:1.1rem;line-height:1.5;">
+          {% for f in tier.features %}<li>{{ f }}</li>{% endfor %}
+        </ul>
+        <p style="margin-top:1rem;"><a class="btn" href="contact.{{ page_extension }}">Request quote</a></p>
+      </article>
+      {% endfor %}
+    </div>
+  </div>
+</section>

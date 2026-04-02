@@ -1,0 +1,10 @@
+slot: blog_list
+required_vars:
+  - blog_heading
+  - blog_intro
+  - blog_posts
+  - blog_page_groups
+variants:
+  - blog_list_1.html
+  - blog_list_2.html
+  - blog_list_3.html

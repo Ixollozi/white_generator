@@ -26,6 +26,8 @@ def _cmd_generate(args: argparse.Namespace) -> int:
         cli_overrides["seed"] = args.seed
     if args.templates:
         cli_overrides["templates"] = [t.strip() for t in args.templates.split(",") if t.strip()]
+    if args.vertical:
+        cli_overrides["vertical"] = args.vertical.strip()
     if args.zip:
         cli_overrides["zip_each_site"] = True
 
@@ -53,6 +55,12 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--base-url", type=str, default=None, help="Canonical base URL for sitemap")
     g.add_argument("--seed", type=int, default=None, help="Global seed (per-site seeds are derived)")
     g.add_argument("--templates", type=str, default=None, help="Comma-separated template ids")
+    g.add_argument(
+        "--vertical",
+        type=str,
+        default=None,
+        help="Niche id from data/verticals.yaml (e.g. cleaning, marketing_agency); omit for random",
+    )
     g.add_argument("--zip", action="store_true", help="Write a zip next to each site folder")
     g.set_defaults(func=_cmd_generate)
 

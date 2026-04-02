@@ -5,6 +5,8 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
+    // Allow ngrok domains for remote preview.
+    allowedHosts: [".ngrok-free.dev"],
     proxy: {
       "/api": { target: "http://127.0.0.1:8000", changeOrigin: true },
     },

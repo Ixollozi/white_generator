@@ -1,0 +1,7 @@
+slot: process_preview
+required_vars:
+  - page_extension
+  - process_preview_heading
+  - process_preview_steps
+variants:
+  - process_preview_1.html

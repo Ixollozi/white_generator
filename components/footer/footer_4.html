@@ -1,0 +1,70 @@
+<footer class="block footer footer--minimal-bar">
+  <div class="container footer-grid">
+    <p><strong>{{ brand_name }}</strong> — {{ tagline }}</p>
+    <p class="legal-links">
+      {% if policy_links %}
+        {% for pl in policy_links %}
+          <a href="{{ pl.href }}">{{ pl.label }}</a>{% if not loop.last %} · {% endif %}
+        {% endfor %}
+      {% else %}
+        <a href="{% if page_extension == 'php' %}privacy-policy.php{% else %}privacy-policy.{{ page_extension }}{% endif %}">Privacy Policy</a>
+        ·
+        <a href="{% if page_extension == 'php' %}terms-of-service.php{% else %}terms-of-service.{{ page_extension }}{% endif %}">Terms</a>
+        ·
+        <a href="{% if page_extension == 'php' %}cookie-policy.php{% else %}cookie-policy.{{ page_extension }}{% endif %}">Cookie Policy</a>
+      {% endif %}
+    </p>
+    <p style="font-size:0.85rem;color:#6b7280;">{{ email }} · {{ phone }} · Est. {{ founded_year }}</p>
+    <p style="font-size:0.8rem;color:#6b7280;">© {{ year }} {{ brand_name }}.</p>
+    {% if social_instagram or social_tiktok or social_twitter or social_linkedin or social_facebook %}
+    <p style="font-size:0.85rem;margin:0;display:flex;flex-wrap:wrap;gap:0.35rem 0.65rem;">
+      {% if social_instagram %}<a href="{{ social_instagram }}" rel="noopener noreferrer" target="_blank">Instagram</a>{% endif %}
+      {% if social_tiktok %}<a href="{{ social_tiktok }}" rel="noopener noreferrer" target="_blank">TikTok</a>{% endif %}
+      {% if social_twitter %}<a href="{{ social_twitter }}" rel="noopener noreferrer" target="_blank">X</a>{% endif %}
+      {% if social_linkedin %}<a href="{{ social_linkedin }}" rel="noopener noreferrer" target="_blank">LinkedIn</a>{% endif %}
+      {% if social_facebook %}<a href="{{ social_facebook }}" rel="noopener noreferrer" target="_blank">Facebook</a>{% endif %}
+    </p>
+    {% endif %}
+  </div>
+  <div class="container" style="margin-top:0.75rem;">
+    <form class="footer-newsletter" action="/forms/subscribe" method="post" style="display:flex;flex-wrap:wrap;gap:0.5rem;max-width:420px;">
+      <input type="text" name="website" autocomplete="off" class="sr-only" aria-hidden="true">
+      <input type="hidden" name="page" value="">
+      <label style="flex:1;min-width:160px;"><input type="email" name="email" placeholder="Newsletter email" autocomplete="email" aria-label="Newsletter email" style="width:100%;padding:0.4rem 0.55rem;" required></label>
+      <button type="submit" class="btn">Subscribe</button>
+    </form>
+    <p class="footer-newsletter-msg" style="font-size:0.85rem;color:#64748b;margin:0.5rem 0 0;"></p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var form = document.querySelector('.footer-newsletter');
+  if(!form) return;
+  var msg = form.parentElement && form.parentElement.querySelector('.footer-newsletter-msg');
+  var page = form.querySelector('input[name=\"page\"]');
+  if(page && !page.value) { try{ page.value = window.location && window.location.pathname ? window.location.pathname : ''; }catch(e){} }
+  form.addEventListener('submit', async function(ev){
+    try{
+      ev.preventDefault();
+      if(msg) msg.textContent = 'Submitting…';
+      var fd = new FormData(form);
+      var payload = Object.fromEntries(fd.entries());
+      var res = await fetch(form.getAttribute('action') || '/forms/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if(!res.ok){
+        if(msg) msg.textContent = 'Could not subscribe. Please try again.';
+        return;
+      }
+      form.reset();
+      if(page) { try{ page.value = window.location && window.location.pathname ? window.location.pathname : ''; }catch(e){} }
+      if(msg) msg.textContent = 'Subscribed. Check your inbox for updates.';
+    }catch(e){
+      if(msg) msg.textContent = 'Could not subscribe. Please try again.';
+    }
+  }, { passive: false });
+})();
+</script>

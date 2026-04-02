@@ -6,6 +6,15 @@
     {% elif page_key == 'contact' %}
     <h1>{{ contact_page_header }}</h1>
     <p class="lead">{{ contact_page_sub }}</p>
+    {% elif page_key == 'services' %}
+    <h1>{{ services_heading }}</h1>
+    <p class="lead">{{ services_intro }}</p>
+    {% elif page_key == 'blog' %}
+    <h1>{{ blog_page_header }}</h1>
+    <p class="lead">{{ blog_page_sub }}</p>
+    {% elif page_key == 'faq' %}
+    <h1>{{ faq_page_header }}</h1>
+    <p class="lead">{{ faq_page_sub }}</p>
     {% else %}
     <h1>{{ brand_name }}</h1>
     {% endif %}

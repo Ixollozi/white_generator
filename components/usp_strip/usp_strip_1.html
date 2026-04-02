@@ -1,0 +1,13 @@
+<section class="block usp-strip" aria-labelledby="usp-h">
+  <div class="container">
+    <h2 id="usp-h">{{ usp_heading }}</h2>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;margin-top:1rem;">
+      {% for u in usp_items %}
+      <div class="card" style="padding:1rem;border:1px solid #e5e7eb;border-radius:10px;">
+        <h3 style="margin:0 0 0.35rem;font-size:1.05rem;">{{ u.title }}</h3>
+        <p style="margin:0;font-size:0.92rem;color:#475569;">{{ u.text }}</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>

@@ -1,0 +1,13 @@
+<section class="block gallery-section gallery-section--strip">
+  <div class="container">
+    <h2>{{ gallery_heading }}</h2>
+    <div style="display:flex;flex-wrap:wrap;gap:14px;">
+      {% for g in gallery_items|selectattr('image_src') %}
+      <div style="flex:1 1 200px;min-width:180px;">
+        <img src="{{ g.image_src }}" width="640" height="400" alt="{{ g.caption }} — {{ brand_name }}{% if city %} {{ city }}{% endif %}" style="display:block;width:100%;height:auto;aspect-ratio:16/10;border-radius:12px;border:1px solid #e5e7eb;object-fit:cover;">
+        <p style="margin:0.45rem 0 0;font-size:0.875rem;color:#374151;">{{ g.caption }}</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>

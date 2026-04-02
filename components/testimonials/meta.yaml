@@ -1,0 +1,7 @@
+required_vars:
+  - testimonials_heading
+  - testimonial_items
+variants:
+  - testimonials_1.html
+  - testimonials_2.html
+  - testimonials_3.html

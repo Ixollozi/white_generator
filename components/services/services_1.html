@@ -6,9 +6,26 @@
       {% for item in service_items %}
       <article class="card">
         <h3>{{ item.title }}</h3>
+        {% if item.price_from %}<p class="price-from" style="font-weight:600;color:#0f172a;margin:0 0 0.35rem;">{{ item.price_from }}</p>{% endif %}
+        {% if item.pricing_hint %}<p class="pricing-hint" style="font-size:0.9rem;color:#475569;margin:0 0 0.35rem;">{{ item.pricing_hint }}</p>{% endif %}
         <p>{{ item.text }}</p>
+        {% if item.ideal_for %}<p class="ideal-for" style="font-size:0.88rem;margin:0.5rem 0 0;color:#64748b;"><em>Ideal for:</em> {{ item.ideal_for }}</p>{% endif %}
+        {% if item.process_steps %}
+        <ol style="font-size:0.88rem;margin:0.5rem 0 0;padding-left:1.1rem;color:#334155;">
+          {% for st in item.process_steps %}<li><strong>{{ st.label }}</strong> — {{ st.text }}</li>{% endfor %}
+        </ol>
+        {% endif %}
+        {% if item.service_faq %}
+        <dl style="font-size:0.85rem;margin:0.75rem 0 0;">
+          {% for fq in item.service_faq %}
+          <dt style="font-weight:600;margin-top:0.35rem;">{{ fq.q }}</dt>
+          <dd style="margin:0.15rem 0 0;">{{ fq.a }}</dd>
+          {% endfor %}
+        </dl>
+        {% endif %}
       </article>
       {% endfor %}
     </div>
+    <p style="margin-top:1.25rem;">Ready to start? <a href="about.{{ page_extension }}">About our approach</a> or <a href="contact.{{ page_extension }}">contact the team</a>.</p>
   </div>
 </section>

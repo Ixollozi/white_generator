@@ -8,12 +8,19 @@ export type TemplateInfo = {
   display_name: string | null;
 };
 
+export type VerticalInfo = {
+  id: string;
+  label_ru: string;
+  hint: string | null;
+};
+
 export type GeneratePayload = {
   count: number;
   templates: string[];
   pages: string[] | null;
   base_url: string;
   site_name: string | null;
+  vertical: string | null;
   theme: string;
   seed: number | null;
   strict_components: boolean;
@@ -21,6 +28,8 @@ export type GeneratePayload = {
     domain_mode: "none" | "brand_tld" | "random_tld" | "custom";
     tlds: string[];
     custom_domain?: string | null;
+    geo_profile_id?: string | null;
+    geo_profile?: Record<string, unknown> | null;
   };
   seo: { generate_sitemap: boolean; generate_robots: boolean; generate_keywords: boolean };
   noise: {
@@ -36,9 +45,14 @@ export type GeneratePayload = {
     web_sources: string[];
     asset_pack_id: string | null;
     count: number;
+    image_source?: string | null;
   };
   integrations: { offer_link: string };
   zip_each_site: boolean;
+  write_build_manifest?: boolean;
+  news_article_count?: number | null;
+  news_default_article_kind?: string | null;
+  news_style_mix?: Record<string, string> | null;
 };
 
 export type JobCreated = { job_id: string };
@@ -64,6 +78,8 @@ export type SiteSummary = {
   template_id: string | null;
   brand_name: string | null;
   build_id: string | null;
+  vertical_id: string | null;
+  theme_pack_folder: string | null;
   has_zip: boolean;
 };
 
@@ -106,6 +122,12 @@ export async function fetchTemplates(): Promise<TemplateInfo[]> {
 
 export async function fetchThemes(): Promise<string[]> {
   const res = await fetch(`${API_BASE}/api/themes`);
+  if (!res.ok) throw new Error(await parseError(res));
+  return res.json();
+}
+
+export async function fetchVerticals(): Promise<VerticalInfo[]> {
+  const res = await fetch(`${API_BASE}/api/verticals`);
   if (!res.ok) throw new Error(await parseError(res));
   return res.json();
 }

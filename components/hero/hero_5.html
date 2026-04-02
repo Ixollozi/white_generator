@@ -1,0 +1,25 @@
+<section class="block hero hero-trust">
+  <div class="container" style="display:grid;grid-template-columns:1fr;gap:1.25rem;align-items:center;">
+    {% if hero_image_src %}
+    <div style="border-radius:14px;overflow:hidden;border:1px solid #e2e8f0;max-height:380px;">
+      <img src="{{ hero_image_src }}" alt="{{ hero_image_alt | default(brand_name ~ ' — ' ~ (city | default('')), true) }}" width="1600" height="900" style="display:block;width:100%;height:auto;max-height:380px;object-fit:cover;" loading="eager" decoding="async" fetchpriority="high">
+    </div>
+    {% endif %}
+    <div>
+      <p class="eyebrow">{{ brand_name }}</p>
+      {% if hero_show_rating and hero_rating_summary %}
+      <p style="margin:0 0 0.5rem;font-size:0.95rem;color:#0f766e;font-weight:600;">{{ hero_rating_summary }}</p>
+      {% endif %}
+      <h1>{{ hero_title }}</h1>
+      <p class="lead">{{ hero_subtitle }}</p>
+      {% if hero_trust_bullets %}
+      <ul style="margin:0.75rem 0 1rem;padding-left:1.2rem;line-height:1.55;color:#334155;font-size:0.95rem;">
+        {% for b in hero_trust_bullets %}
+        <li>{{ b }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+      <a class="btn" href="{{ hero_cta_href | default('contact.php') }}">{{ hero_cta_label | default('Contact us') }}</a>
+    </div>
+  </div>
+</section>

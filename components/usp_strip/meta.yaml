@@ -1,0 +1,6 @@
+slot: usp_strip
+required_vars:
+  - usp_heading
+  - usp_items
+variants:
+  - usp_strip_1.html

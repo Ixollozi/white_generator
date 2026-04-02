@@ -3,28 +3,57 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{ legal_title }} — {{ brand_name }}</title>
+  <title>{{ page_title | default(legal_title ~ ' — ' ~ brand_name) }}</title>
+  <meta name="description" content="{{ page_description | default('Policy information for ' ~ brand_name) }}">
+  {% if page_canonical %}
+  <link rel="canonical" href="{{ page_canonical }}">
+  {% endif %}
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="{{ page_title | default(legal_title ~ ' — ' ~ brand_name) }}">
+  <meta property="og:description" content="{{ page_description | default('Policy information') }}">
+  {% if page_canonical %}
+  <meta property="og:url" content="{{ page_canonical }}">
+  {% endif %}
+  {% if site_base_url and og_image_src %}
+  <meta property="og:image" content="{{ site_base_url }}/{{ og_image_src }}">
+  {% endif %}
+  {% if json_ld_organization %}
+  <script type="application/ld+json">{{ json_ld_organization | safe }}</script>
+  {% endif %}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="{{ google_fonts_stylesheet_url }}" rel="stylesheet">
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="site.webmanifest">
   <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/core.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/vendor.css">
+  <style>body { font-family: {{ body_font_family | safe }}; } h1,h2,h3 { font-family: {{ heading_font_family | safe }}; }</style>
 </head>
-<body>
+<body class="site-body{% if body_extra_class %} {{ body_extra_class }}{% endif %}">
+  {% if promo_banner_text %}
+  <div class="promo-banner" style="background:#111827;color:#f9fafb;text-align:center;padding:0.4rem;font-size:0.9rem;">{{ promo_banner_text }}</div>
+  {% endif %}
   <header class="site-header">
     <div class="container header-inner">
-      <a class="logo" href="index.php">{{ brand_name }}</a>
+      <a class="logo" href="{% if page_extension == 'php' %}index.php{% else %}index.{{ page_extension }}{% endif %}">{% if logo_src %}<img src="{{ logo_src }}" alt="{{ brand_name }}" width="150" height="36">{% else %}{{ brand_name }}{% endif %}</a>
       <nav class="nav">
-        <a href="index.php">Home</a>
-        <a href="about.php">About</a>
-        <a href="contact.php">Contact</a>
+        {% for link in nav_items %}
+        <a href="{{ link.href }}">{{ link.label }}</a>
+        {% endfor %}
       </nav>
     </div>
   </header>
   <main class="container legal">
     <h1>{{ legal_title }}</h1>
-    <p>{{ legal_body }}</p>
-    <p><a href="index.php">Back to home</a></p>
+    <div class="legal-body">{{ legal_body | safe }}</div>
+    <p><a href="{% if page_extension == 'php' %}index.php{% else %}index.{{ page_extension }}{% endif %}">Back to home</a> · <a href="contact.{{ page_extension }}">Contact</a></p>
   </main>
   <footer class="site-footer">
     <div class="container">
-      <p>&copy; {{ brand_name }}</p>
+      <p>&copy; {{ year }} {{ brand_name }}</p>
     </div>
   </footer>
 </body>

@@ -1,7 +1,16 @@
+slot: hero
 required_vars:
   - brand_name
   - hero_title
   - hero_subtitle
+  - hero_cta_label
+  - hero_cta_href
+  - hero_image_src
+  - hero_image_alt
+  - city
 variants:
   - hero_1.html
   - hero_2.html
+  - hero_3.html
+  - hero_4.html
+  - hero_5.html

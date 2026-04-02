@@ -1,0 +1,6 @@
+required_vars:
+  - gallery_heading
+  - gallery_items
+variants:
+  - gallery_section_1.html
+  - gallery_section_2.html

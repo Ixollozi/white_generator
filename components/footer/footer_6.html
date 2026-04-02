@@ -1,0 +1,37 @@
+<footer class="block footer footer--trust">
+  <div class="container" style="padding:1.75rem 1rem;">
+    {% if footer_trust_strip %}
+    <p style="margin:0 0 0.75rem;font-size:0.88rem;color:#475569;line-height:1.5;">{{ footer_trust_strip }}</p>
+    {% endif %}
+    {% if footer_review_snippet %}
+    <p style="margin:0 0 1rem;font-size:0.92rem;color:#334155;font-style:italic;line-height:1.5;">{{ footer_review_snippet }}</p>
+    {% endif %}
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1.25rem;">
+      <div>
+        <strong>{{ brand_name }}</strong>
+        <p>{{ tagline }}</p>
+        <p style="font-size:0.9rem;color:#64748b;">Est. {{ founded_year }}</p>
+      </div>
+      <div>
+        <p style="font-weight:600;margin:0 0 0.35rem;">Contact</p>
+        <p style="margin:0;">{{ email }}</p>
+        <p style="margin:0;">{{ phone }}</p>
+        <p style="white-space:pre-line;font-size:0.92rem;">{{ address_multiline | default(address) }}</p>
+      </div>
+      <div class="legal-links" style="display:flex;flex-direction:column;gap:0.35rem;">
+        <span style="font-size:0.85rem;font-weight:600;">Policies</span>
+        {% if policy_links %}
+          {% for pl in policy_links %}
+            <a href="{{ pl.href }}">{{ pl.label }}</a>
+          {% endfor %}
+        {% else %}
+          <a href="{% if page_extension == 'php' %}privacy-policy.php{% else %}privacy-policy.{{ page_extension }}{% endif %}">Privacy</a>
+          <a href="{% if page_extension == 'php' %}terms-of-service.php{% else %}terms-of-service.{{ page_extension }}{% endif %}">Terms</a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="container" style="border-top:1px solid #e5e7eb;padding:0.75rem 1rem;font-size:0.85rem;color:#64748b;">
+    © {{ year }} {{ brand_name }}. All rights reserved.
+  </div>
+</footer>

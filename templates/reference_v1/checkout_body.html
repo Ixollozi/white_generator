@@ -1,0 +1,78 @@
+<section class="block">
+  <div class="container">
+    <h1 style="margin:0 0 0.35rem;">Checkout</h1>
+    <p class="muted" style="margin:0 0 1rem;">This is a lightweight checkout request; you'll receive a confirmation email from support.</p>
+    <div class="grid" style="grid-template-columns:1fr 0.9fr;gap:1.25rem;align-items:start;">
+      <div class="card">
+        <form id="checkout" action="/forms/order" method="post" style="display:grid;gap:.75rem;">
+          <input type="text" name="website" autocomplete="off" class="sr-only" aria-hidden="true">
+          <input type="hidden" name="page" value="">
+          <label>Email<br><input name="email" type="email" required style="width:100%;padding:.5rem;border:1px solid #e5e7eb;border-radius:10px;"></label>
+          <label>Full name<br><input name="name" type="text" required style="width:100%;padding:.5rem;border:1px solid #e5e7eb;border-radius:10px;"></label>
+          <label>Address<br><input name="address" type="text" required placeholder="Street / Apt (optional)" style="width:100%;padding:.5rem;border:1px solid #e5e7eb;border-radius:10px;"></label>
+          <div class="grid" style="grid-template-columns:1fr 1fr;gap:.75rem;">
+            <label>City<br><input name="city" type="text" required style="width:100%;padding:.5rem;border:1px solid #e5e7eb;border-radius:10px;"></label>
+            <label>Postal<br><input name="postal" type="text" required style="width:100%;padding:.5rem;border:1px solid #e5e7eb;border-radius:10px;"></label>
+          </div>
+          <label>Notes (optional)<br><textarea name="notes" rows="3" style="width:100%;padding:.5rem;border:1px solid #e5e7eb;border-radius:10px;"></textarea></label>
+          <button class="btn" type="submit">Send checkout request</button>
+          <p id="msg" class="muted" style="margin:0;font-size:.9rem;"></p>
+        </form>
+      </div>
+      <div class="card">
+        <h2 style="margin:0 0 0.5rem;">Order summary</h2>
+        <div id="summary"></div>
+        <p class="muted" style="margin:0.75rem 0 0;">Need help with sizing? Use the <a href="contact.{{ page_extension }}">support page</a>.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+(function(){
+  var form = document.getElementById('checkout');
+  var msg = document.getElementById('msg');
+  var page = form && form.querySelector('input[name=\"page\"]');
+  if(page && !page.value) { try{ page.value = window.location && window.location.pathname ? window.location.pathname : ''; }catch(e){} }
+  function readCart(){ try{ return JSON.parse(localStorage.getItem('cart_v1')||'[]')||[]; }catch(e){ return []; } }
+  function fmtMoney(v){ try{ return '$' + (Math.round(v*100)/100).toFixed(2); }catch(e){ return '$0.00'; } }
+  function render(){
+    var root = document.getElementById('summary');
+    if(!root) return;
+    var items = readCart().filter(Boolean);
+    if(!items.length){ root.innerHTML = '<p class=\"muted\" style=\"margin:0;\">Cart is empty.</p>'; return; }
+    var total = 0;
+    var html = '<ul style=\"margin:0;padding-left:1.1rem;\">';
+    items.forEach(function(it){
+      var qty = Math.max(1, parseInt(it.qty||1,10));
+      var price = parseFloat(it.price||0)||0;
+      total += qty * price;
+      var label = (it.title||'Item') + (it.size ? (' · ' + it.size) : '');
+      html += '<li>'+qty+' × '+label+' <span class=\"muted\">('+fmtMoney(price)+')</span></li>';
+    });
+    html += '</ul>';
+    html += '<p style=\"margin:0.75rem 0 0;\"><strong>Total: '+fmtMoney(total)+'</strong></p>';
+    root.innerHTML = html;
+  }
+  render();
+  if(!form) return;
+  form.addEventListener('submit', async function(ev){
+    try{
+      ev.preventDefault();
+      if(msg) msg.textContent = 'Submitting…';
+      var fd = new FormData(form);
+      var payload = Object.fromEntries(fd.entries());
+      payload.cart = readCart();
+      var res = await fetch(form.getAttribute('action') || '/forms/order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if(!res.ok){ if(msg) msg.textContent = 'Could not submit. Please try again.'; return; }
+      if(msg) msg.textContent = 'Request received. Support will email you shortly.';
+    }catch(e){
+      if(msg) msg.textContent = 'Could not submit. Please try again.';
+    }
+  }, { passive:false });
+})();
+</script>

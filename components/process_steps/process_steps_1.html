@@ -1,0 +1,16 @@
+<section class="block process-steps">
+  <div class="container">
+    <h2>{{ process_page_header }}</h2>
+    <p class="intro">{{ process_page_intro }}</p>
+    <ol class="steps-list" style="margin:1.25rem 0 0;padding-left:0;list-style:none;counter-reset:step;">
+      {% for step in process_steps_items %}
+      <li style="counter-increment:step;margin-bottom:1rem;padding-left:3rem;position:relative;">
+        <span style="position:absolute;left:0;top:0;width:2rem;height:2rem;border-radius:999px;background:#0f172a;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85rem;">{{ loop.index }}</span>
+        <h3 style="margin:0 0 0.25rem;">{{ step.title }}</h3>
+        <p style="margin:0;color:#475569;">{{ step.text }}</p>
+      </li>
+      {% endfor %}
+    </ol>
+    <p><a class="btn" href="contact.{{ page_extension }}">Start a conversation</a></p>
+  </div>
+</section>

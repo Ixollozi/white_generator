@@ -1,0 +1,20 @@
+testimonials_heading: Patient feedback
+testimonial_items:
+  - quote: "The doctor spent time explaining my results — not just handing me a printout."
+    name: "Angela R."
+    role: "Patient"
+  - quote: "Same-day appointment when my child had a fever. That matters."
+    name: "Brian C."
+    role: "Parent"
+  - quote: "They coordinated with my specialist and followed up. That never happened at my old clinic."
+    name: "Nancy T."
+    role: "Long-term patient"
+faq_heading: Patient questions
+faq_items:
+  - q: "Do you accept walk-ins?"
+    a: "We reserve same-day slots for urgent needs. For routine visits, booking ahead ensures shorter wait times."
+  - q: "What insurance do you accept?"
+    a: "We accept most major plans and will verify your coverage before your appointment."
+  - q: "Can I access my records online?"
+    a: "Yes — our patient portal gives you access to lab results, visit summaries, and appointment scheduling."
+services_seo_description: "{brand_name} offers primary care, diagnostics, and coordinated specialist referrals with same-day availability and a patient-first approach."

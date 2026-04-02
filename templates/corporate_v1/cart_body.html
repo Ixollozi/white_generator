@@ -1,0 +1,64 @@
+<section class="block">
+  <div class="container">
+    <h1 style="margin:0 0 0.35rem;">Cart</h1>
+    <p class="muted" style="margin:0 0 1rem;">Items are stored locally in your browser.</p>
+    <div class="card">
+      <div id="cart"></div>
+      <div style="display:flex;flex-wrap:wrap;gap:0.6rem;justify-content:space-between;align-items:center;margin-top:1rem;">
+        <a class="btn" href="shop.{{ page_extension }}" style="background:#111827;">Continue shopping</a>
+        <a class="btn" href="checkout.{{ page_extension }}">Checkout</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+(function(){
+  function readCart(){ try{ return JSON.parse(localStorage.getItem('cart_v1')||'[]')||[]; }catch(e){ return []; } }
+  function writeCart(items){ try{ localStorage.setItem('cart_v1', JSON.stringify(items||[])); }catch(e){} }
+  function fmtMoney(v){ try{ return '$' + (Math.round(v*100)/100).toFixed(2); }catch(e){ return '$0.00'; } }
+  function render(){
+    var root = document.getElementById('cart');
+    if(!root) return;
+    var items = readCart().filter(Boolean);
+    if(!items.length){
+      root.innerHTML = '<p class="muted" style="margin:0;">Your cart is empty.</p>';
+      return;
+    }
+    var total = 0;
+    var html = '<div style="display:grid;gap:.75rem;">';
+    items.forEach(function(it, idx){
+      var qty = Math.max(1, parseInt(it.qty||1,10));
+      var price = parseFloat(it.price||0)||0;
+      total += qty * price;
+      var label = (it.title||'Item') + (it.size ? (' · ' + it.size) : '');
+      html += '<div style="display:flex;gap:.75rem;justify-content:space-between;align-items:flex-start;border-bottom:1px solid #e5e7eb;padding-bottom:.6rem;">'
+        + '<div><strong>'+label+'</strong><div class="muted" style="font-size:.9rem;">SKU '+(it.sku||'')+'</div></div>'
+        + '<div style="text-align:right;">'
+        + '<div>'+fmtMoney(price)+'</div>'
+        + '<div class="muted" style="font-size:.9rem;">Qty '
+        + '<button type="button" data-a="dec" data-i="'+idx+'" style="margin-left:.3rem;">-</button>'
+        + ' '+qty+' '
+        + '<button type="button" data-a="inc" data-i="'+idx+'">+</button>'
+        + '</div>'
+        + '</div>'
+        + '</div>';
+    });
+    html += '</div>';
+    html += '<p style="margin:1rem 0 0;text-align:right;"><strong>Total: '+fmtMoney(total)+'</strong></p>';
+    root.innerHTML = html;
+    root.querySelectorAll('button[data-a]').forEach(function(b){
+      b.addEventListener('click', function(){
+        var i = parseInt(b.getAttribute('data-i')||'0',10);
+        var a = b.getAttribute('data-a');
+        var items2 = readCart().filter(Boolean);
+        if(!items2[i]) return;
+        items2[i].qty = Math.max(1, parseInt(items2[i].qty||1,10) + (a==='inc' ? 1 : -1));
+        writeCart(items2);
+        render();
+      });
+    });
+  }
+  render();
+})();
+</script>

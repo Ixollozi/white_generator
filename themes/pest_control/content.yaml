@@ -1,0 +1,20 @@
+testimonials_heading: Customer reviews
+testimonial_items:
+  - quote: "They identified the entry points and sealed them — haven't seen a mouse since."
+    name: "Barbara K."
+    role: "Homeowner"
+  - quote: "Quarterly service keeps our restaurant pest-free. Reliable every time."
+    name: "Tony R."
+    role: "Restaurant owner"
+  - quote: "They explained exactly what they were applying and why. Very professional."
+    name: "Linda P."
+    role: "Property manager"
+faq_heading: Pest control FAQ
+faq_items:
+  - q: "Are your treatments safe for pets and children?"
+    a: "We use EPA-registered products and follow label directions. We'll advise on any precautions specific to your situation."
+  - q: "Do you offer one-time treatments?"
+    a: "Yes, but ongoing prevention plans are more effective for recurring pest issues."
+  - q: "What pests do you handle?"
+    a: "We treat insects, rodents, wildlife exclusion, and specialty pests like termites and bed bugs."
+services_seo_description: "{brand_name} provides licensed pest inspection, targeted treatment, and prevention programs for residential and commercial properties."

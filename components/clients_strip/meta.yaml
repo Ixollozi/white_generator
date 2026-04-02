@@ -1,0 +1,6 @@
+slot: clients_strip
+required_vars:
+  - clients_heading
+  - client_logos
+variants:
+  - clients_strip_1.html

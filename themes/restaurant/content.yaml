@@ -1,0 +1,25 @@
+testimonials_heading: Guest notes
+testimonial_items:
+  - quote: "Seasonal menu actually changes — we keep coming back for the specials."
+    name: "Mia R."
+    role: "Local regular"
+  - quote: "Wine pairings without pretense — staff nailed the pacing."
+    name: "Alex T."
+    role: "Anniversary dinner"
+  - quote: "Handled our group of twelve calmly on a Friday."
+    name: "Lee K."
+    role: "Event host"
+faq_heading: Reservations & hours
+faq_items:
+  - q: "Do I need a reservation?"
+    a: "Walk-ins welcome; reservations recommended Friday–Saturday and for groups over five."
+  - q: "Do you accommodate dietary needs?"
+    a: "Ask your server — we mark allergens and can swap sides when the kitchen allows."
+  - q: "Private events?"
+    a: "Set menus available; contact us with date, headcount, and timing."
+gallery_heading: Dishes & room
+gallery_items:
+  - caption: "Chef’s seasonal plate"
+  - caption: "Dining room"
+  - caption: "Dessert & coffee"
+services_seo_description: "{brand_name} offers dine-in hospitality, reservations, wine, and set menus — ingredient-led cooking in a relaxed room."

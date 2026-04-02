@@ -1,13 +1,20 @@
 <section class="block hero hero-b">
-  <div class="container split">
+  <div class="container split" style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;align-items:center;">
     <div>
       <h1>{{ hero_title }}</h1>
       <p class="lead">{{ hero_subtitle }}</p>
       <p class="meta">{{ tagline }}</p>
+      <p style="margin-top:1rem;"><a class="btn" href="{{ hero_cta_href | default('contact.php') }}">{{ hero_cta_label | default('Contact us') }}</a></p>
     </div>
-    <div class="panel">
+    <div class="panel" style="padding:0;overflow:hidden;border-radius:12px;border:1px solid #e2e8f0;">
+      {% if hero_image_src %}
+      <img src="{{ hero_image_src }}" alt="{{ hero_image_alt | default(brand_name, true) }}" width="900" height="560" style="display:block;width:100%;height:auto;object-fit:cover;" loading="lazy">
+      {% else %}
+      <div class="panel" style="margin:0;padding:1.25rem;">
       <strong>{{ brand_name }}</strong>
       <p>Practical programs, clear reporting, steady delivery.</p>
+      </div>
+      {% endif %}
     </div>
   </div>
 </section>

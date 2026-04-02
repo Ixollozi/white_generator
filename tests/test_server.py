@@ -30,6 +30,58 @@ def test_api_templates() -> None:
         assert "corporate_v1" in folders
 
 
+def test_api_verticals() -> None:
+    with TestClient(app) as client:
+        r = client.get("/api/verticals")
+        assert r.status_code == 200
+        data = r.json()
+        assert isinstance(data, list)
+        ids = {x["id"] for x in data}
+        assert "cleaning" in ids
+        assert "marketing_agency" in ids
+        assert "clothing" in ids
+
+
+def test_api_generate_rejects_unknown_vertical() -> None:
+    with TestClient(app) as client:
+        r = client.post(
+            "/api/generate",
+            json={
+                "count": 1,
+                "templates": ["corporate_v1"],
+                "vertical": "___not_a_real_vertical___",
+            },
+        )
+        assert r.status_code == 400
+
+
+def test_leads_endpoints_accept_json_and_form() -> None:
+    with TestClient(app) as client:
+        r1 = client.post(
+            "/forms/subscribe",
+            json={"email": "test@example.com", "page": "/index.php", "website": ""},
+        )
+        assert r1.status_code == 200
+        data1 = r1.json()
+        assert data1.get("ok") is True
+        assert data1.get("lead_id")
+
+        r2 = client.post(
+            "/forms/message",
+            data={
+                "email": "test@example.com",
+                "name": "Tester",
+                "message": "Hello, I want a quote for 1200 sq ft.",
+                "page": "/contact.php",
+                "website": "",
+            },
+        )
+        assert r2.status_code == 200
+        data2 = r2.json()
+        assert data2.get("ok") is True
+        assert data2.get("lead_id")
+
+
 @pytest.mark.skipif(not _UI_BUILT, reason="Build UI: cd frontend && npm run build")
 def test_root_serves_ui_when_built() -> None:
     with TestClient(app) as client:

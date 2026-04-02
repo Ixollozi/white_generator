@@ -1,0 +1,6 @@
+slot: team_strip
+variants:
+  - team_strip_1.html
+required_vars:
+  - team_heading
+  - team_items

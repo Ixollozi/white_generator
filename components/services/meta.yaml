@@ -1,6 +1,10 @@
+slot: services
 required_vars:
+  - page_extension
   - services_heading
   - services_intro
   - service_items
 variants:
   - services_1.html
+  - services_2.html
+  - services_3.html

@@ -1,0 +1,13 @@
+<section class="block faq faq--grid">
+  <div class="container">
+    <h2>{{ faq_heading }}</h2>
+    <div class="grid three">
+      {% for item in faq_items %}
+      <div class="card faq-card">
+        <h3>{{ item.q }}</h3>
+        <p>{{ item.a }}</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>

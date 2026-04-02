@@ -1,0 +1,20 @@
+testimonials_heading: What homeowners say
+testimonial_items:
+  - quote: "They sized the system properly — my energy bills dropped noticeably."
+    name: "Paul M."
+    role: "Homeowner"
+  - quote: "Maintenance plan keeps things running. Haven't had a breakdown in three years."
+    name: "Diana F."
+    role: "Homeowner"
+  - quote: "Emergency repair on the coldest night of the year. They came through."
+    name: "Richard S."
+    role: "Property manager"
+faq_heading: HVAC questions
+faq_items:
+  - q: "How often should I service my system?"
+    a: "We recommend twice a year — once before heating season and once before cooling season."
+  - q: "Do you offer financing for new systems?"
+    a: "Yes — we partner with lenders to offer approved-credit financing on qualifying installations."
+  - q: "What brands do you install?"
+    a: "We're factory-authorized for major brands and recommend equipment based on your home's needs, not margin."
+services_seo_description: "{brand_name} provides licensed HVAC installation, repair, and preventive maintenance with proper load calculations and manufacturer-backed warranties."

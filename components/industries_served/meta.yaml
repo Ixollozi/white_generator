@@ -1,0 +1,8 @@
+slot: industries_served
+required_vars:
+  - page_extension
+  - industries_page_header
+  - industries_page_intro
+  - industries_served_items
+variants:
+  - industries_served_1.html

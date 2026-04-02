@@ -19,10 +19,14 @@ a { color: #2563eb; }
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1rem 0;
+  padding: 0.5rem 0;
 }
-.logo { font-weight: 800; text-decoration: none; color: inherit; }
-.nav { display: flex; gap: 1rem; flex-wrap: wrap; }
+.logo { font-weight: 800; text-decoration: none; color: inherit; display: inline-flex; align-items: center; }
+.logo img { height: 36px; width: auto; display: block; }
+.nav { display: flex; gap: 1rem; flex-wrap: wrap; align-items: center; }
+.minimal-header { background: #fff; position: sticky; top: 0; z-index: 10; border-bottom: 1px solid #e5e7eb; }
+.header-row { display: flex; align-items: center; justify-content: space-between; padding: 0.5rem 0; gap: 1rem; flex-wrap: wrap; }
+.nav-row .logo img, .header-row .logo img, .minimal-header .logo img { height: 36px; width: auto; display: block; }
 .site-main { min-height: 60vh; }
 .block { padding: 3rem 0; }
 .hero { background: linear-gradient(135deg, #1e3a8a, #312e81); color: #fff; }

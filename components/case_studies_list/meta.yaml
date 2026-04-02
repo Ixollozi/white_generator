@@ -1,0 +1,8 @@
+slot: case_studies_list
+required_vars:
+  - page_extension
+  - case_studies_page_header
+  - case_studies_page_intro
+  - case_studies
+variants:
+  - case_studies_list_1.html

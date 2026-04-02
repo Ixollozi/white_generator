@@ -1,0 +1,15 @@
+<section class="block process-steps process-steps--cards">
+  <div class="container narrow">
+    <h2>{{ process_page_header }}</h2>
+    <p>{{ process_page_intro }}</p>
+    <div style="display:grid;gap:0.75rem;margin-top:1rem;">
+      {% for step in process_steps_items %}
+      <div class="card" style="padding:1rem;border:1px solid #e5e7eb;border-radius:10px;">
+        <strong style="color:#64748b;font-size:0.8rem;text-transform:uppercase;">Step {{ loop.index }}</strong>
+        <h3 style="margin:0.25rem 0;">{{ step.title }}</h3>
+        <p style="margin:0;color:#334155;">{{ step.text }}</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>

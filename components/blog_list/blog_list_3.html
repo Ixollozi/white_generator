@@ -1,0 +1,44 @@
+<section class="block blog-timeline">
+  {% set is_news = (vertical_id == 'news') %}
+  {% set post_prefix = 'article-' if is_news else 'post-' %}
+  <div class="container">
+    <h2>{{ blog_heading }}</h2>
+    <p class="lead">{{ blog_intro }}</p>
+    {% if blog_page_groups and blog_page_groups|length > 1 %}
+    <nav class="blog-pagination" aria-label="Article pages" style="margin:0 0 1rem;">
+      {% for group in blog_page_groups %}
+      <a href="#blog-page-{{ loop.index }}" style="margin-right:0.6rem;">Page {{ loop.index }}</a>
+      {% endfor %}
+    </nav>
+    {% endif %}
+    {% if blog_page_groups %}
+      {% for group in blog_page_groups %}
+      <ol id="blog-page-{{ loop.index }}" class="blog-timeline-list" style="margin-bottom:2rem;">
+        {% for post in group %}
+        <li id="{{ post.anchor }}">
+          <strong><time {% if post.date_iso %}datetime="{{ post.date_iso }}"{% endif %}>{{ post.date }}</time></strong>
+          {% if post.category %} · <span style="color:#64748b;">{{ post.category }}</span>{% endif %}
+          {% if post.author_name %} · <span style="color:#64748b;">{{ post.author_name }}</span>{% endif %}
+          — <em><a href="{{ post_prefix }}{{ post.anchor }}.{{ page_extension }}">{{ post.title }}</a></em>
+          <p>{{ post.excerpt }}</p>
+          <p style="margin:0;"><a href="{{ post_prefix }}{{ post.anchor }}.{{ page_extension }}">Read full story</a>{% if is_news %} · <a href="authors.{{ page_extension }}">Staff</a>{% endif %}</p>
+        </li>
+        {% endfor %}
+      </ol>
+      {% endfor %}
+    {% else %}
+    <ol class="blog-timeline-list">
+      {% for post in blog_posts %}
+      <li id="{{ post.anchor }}">
+        <strong><time {% if post.date_iso %}datetime="{{ post.date_iso }}"{% endif %}>{{ post.date }}</time></strong>
+        {% if post.category %} · <span style="color:#64748b;">{{ post.category }}</span>{% endif %}
+        {% if post.author_name %} · <span style="color:#64748b;">{{ post.author_name }}</span>{% endif %}
+        — <em><a href="{{ post_prefix }}{{ post.anchor }}.{{ page_extension }}">{{ post.title }}</a></em>
+        <p>{{ post.excerpt }}</p>
+        <p style="margin:0;"><a href="{{ post_prefix }}{{ post.anchor }}.{{ page_extension }}">Read full story</a>{% if is_news %} · <a href="authors.{{ page_extension }}">Staff</a>{% endif %}</p>
+      </li>
+      {% endfor %}
+    </ol>
+    {% endif %}
+  </div>
+</section>

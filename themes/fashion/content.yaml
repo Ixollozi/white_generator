@@ -1,0 +1,25 @@
+testimonials_heading: Customer notes
+testimonial_items:
+  - quote: "Measurements on the page matched what arrived — rare for online fits."
+    name: "Alyssa B."
+    role: "Repeat buyer"
+  - quote: "Returns were two clicks; refund posted quickly."
+    name: "Marcus V."
+    role: "First order"
+  - quote: "Fabric notes helped me choose between two jackets."
+    name: "E. Park"
+    role: "Newsletter subscriber"
+faq_heading: Orders & care
+faq_items:
+  - q: "Sizing help?"
+    a: "Email measurements — we suggest a size based on garment specs."
+  - q: "Shipping timelines?"
+    a: "Fulfillment dates are shown at checkout; tracking is sent when it ships."
+  - q: "Fabric care?"
+    a: "Care symbols and washing guidance are on every product page."
+gallery_heading: Collections
+gallery_items:
+  - caption: "Outerwear drop"
+  - caption: "Knit layers"
+  - caption: "Accessories"
+services_seo_description: "{brand_name} sells apparel and accessories with clear sizing, care notes, and straightforward shipping and returns."

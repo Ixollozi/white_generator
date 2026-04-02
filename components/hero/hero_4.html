@@ -1,0 +1,13 @@
+<section class="block hero hero-video-bg" style="position:relative;min-height:min(72vh,560px);display:flex;align-items:flex-end;">
+  {% if hero_image_src %}
+  <div style="position:absolute;inset:0;z-index:0;">
+    <img src="{{ hero_image_src }}" alt="" width="1920" height="1080" style="width:100%;height:100%;object-fit:cover;filter:brightness(0.45);" loading="eager" decoding="async">
+  </div>
+  {% endif %}
+  <div class="container" style="position:relative;z-index:1;padding:2.5rem 1rem;color:#f8fafc;">
+    <p class="eyebrow" style="opacity:0.9;">{{ brand_name }}</p>
+    <h1 style="text-shadow:0 1px 2px rgba(0,0,0,0.35);">{{ hero_title }}</h1>
+    <p class="lead" style="max-width:36rem;">{{ hero_subtitle }}</p>
+    <a class="btn" href="{{ hero_cta_href | default('contact.php') }}" style="background:#f8fafc;color:#0f172a;border:0;">{{ hero_cta_label | default('Contact us') }}</a>
+  </div>
+</section>

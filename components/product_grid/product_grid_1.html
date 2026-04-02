@@ -1,0 +1,62 @@
+<section class="block">
+  <div class="container">
+    <h2 style="margin:0 0 0.35rem;">Shop</h2>
+    <p class="muted" style="margin:0 0 1rem;">Measured sizing, fabric notes, and straightforward shipping & returns.</p>
+    {% if products and products|length %}
+    <div class="grid three">
+      {% for p in products %}
+      <article class="card">
+        <a href="shop.{{ page_extension }}#p-{{ p.slug }}" style="text-decoration:none;">
+          <div style="border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;background:#f8fafc;">
+            <img src="{{ p.image_src }}" alt="{{ p.title }}" style="display:block;width:100%;height:200px;object-fit:cover;">
+          </div>
+          <h3 style="margin:0.85rem 0 0.25rem;">{{ p.title }}</h3>
+          <p class="muted" style="margin:0 0 0.35rem;">{{ p.material }} · {{ p.color }}</p>
+          <p style="margin:0 0 0.75rem;"><strong>${{ '%.0f'|format(p.price) }}</strong></p>
+        </a>
+        <button type="button" class="btn add-to-cart"
+          data-sku="{{ p.sku }}" data-title="{{ p.title }}" data-price="{{ p.price }}" data-currency="{{ p.currency }}"
+          style="width:100%;">Add to cart</button>
+      </article>
+      {% endfor %}
+    </div>
+    <p style="margin-top:1rem;"><a class="btn" href="cart.{{ page_extension }}" style="background:#111827;">View cart</a></p>
+    {% else %}
+    <p class="muted">Catalog is updating. Please check back soon or contact support.</p>
+    {% endif %}
+  </div>
+</section>
+
+<script>
+(function(){
+  function readCart(){
+    try{ return JSON.parse(localStorage.getItem('cart_v1')||'[]') || []; }catch(e){ return []; }
+  }
+  function writeCart(items){
+    try{ localStorage.setItem('cart_v1', JSON.stringify(items||[])); }catch(e){}
+  }
+  function addItem(it){
+    var items = readCart();
+    var found = items.find(function(x){ return x && x.sku === it.sku; });
+    if(found){ found.qty = (found.qty||1) + 1; }
+    else { items.push({ sku: it.sku, title: it.title, price: it.price, currency: it.currency, qty: 1 }); }
+    writeCart(items);
+  }
+  var btns = document.querySelectorAll('.add-to-cart');
+  if(!btns || !btns.length) return;
+  btns.forEach(function(b){
+    b.addEventListener('click', function(){
+      var sku = b.getAttribute('data-sku')||'';
+      if(!sku) return;
+      addItem({
+        sku: sku,
+        title: b.getAttribute('data-title')||'Item',
+        price: parseFloat(b.getAttribute('data-price')||'0')||0,
+        currency: b.getAttribute('data-currency')||'USD'
+      });
+      b.textContent = 'Added';
+      setTimeout(function(){ b.textContent='Add to cart'; }, 900);
+    });
+  });
+})();
+</script>

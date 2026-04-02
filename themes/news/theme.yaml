@@ -1,0 +1,20 @@
+inject_before: contact_teaser
+index_extras:
+  - testimonials
+  - faq
+  - gallery_section
+nav_items:
+  - { href: index.php, label: Home }
+  - { href: about.php, label: About }
+  - { href: services.php, label: Sections }
+  - { href: contact.php, label: Newsroom }
+brand_prefixes:
+  - Signal
+  - Ledger
+  - Northline
+  - Public
+brand_suffixes:
+  - Brief
+  - Dispatch
+  - Chronicle
+  - Report

@@ -1,8 +1,18 @@
+slot: footer
 required_vars:
   - brand_name
   - email
   - phone
   - address
+  - tagline
+  - founded_year
+  - year
+  - page_extension
+  - address_multiline
 variants:
   - footer_1.html
   - footer_2.html
+  - footer_3.html
+  - footer_4.html
+  - footer_5.html
+  - footer_6.html

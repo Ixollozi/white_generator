@@ -1,8 +1,15 @@
 <section class="block hero hero-a">
-  <div class="container">
+  <div class="container" style="display:grid;grid-template-columns:1fr;gap:1.25rem;align-items:center;">
+    {% if hero_image_src %}
+    <div style="border-radius:14px;overflow:hidden;border:1px solid #e2e8f0;max-height:420px;">
+      <img src="{{ hero_image_src }}" alt="{{ hero_image_alt | default(brand_name ~ ' — ' ~ (city | default('')), true) }}" width="1600" height="900" style="display:block;width:100%;height:auto;max-height:420px;object-fit:cover;" loading="eager" decoding="async" fetchpriority="high">
+    </div>
+    {% endif %}
+    <div>
     <p class="eyebrow">{{ brand_name }}</p>
     <h1>{{ hero_title }}</h1>
     <p class="lead">{{ hero_subtitle }}</p>
-    <a class="btn" href="contact.php">Start a conversation</a>
+    <a class="btn" href="{{ hero_cta_href | default('contact.php') }}">{{ hero_cta_label | default('Contact us') }}</a>
+    </div>
   </div>
 </section>

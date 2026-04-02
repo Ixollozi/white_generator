@@ -1,0 +1,25 @@
+testimonials_heading: What property owners say
+testimonial_items:
+  - quote: "Photo documentation at every stage. I could see exactly what they found and fixed."
+    name: "Steve P."
+    role: "Homeowner"
+  - quote: "Storm damage claim was handled smoothly — they worked directly with my adjuster."
+    name: "Karen D."
+    role: "Homeowner"
+  - quote: "The crew cleaned up every nail and scrap. You'd never know they were here."
+    name: "James L."
+    role: "Commercial property owner"
+faq_heading: Roofing questions
+faq_items:
+  - q: "Do you offer free inspections?"
+    a: "Yes — we provide a written inspection report with photos at no cost for most residential properties."
+  - q: "What warranty do you provide?"
+    a: "We offer workmanship warranties and register manufacturer warranties on qualifying installations."
+  - q: "Can you help with insurance claims?"
+    a: "We document storm damage thoroughly and can meet with your adjuster on-site."
+gallery_heading: Recent projects
+gallery_items:
+  - caption: "Full tear-off and reshingle"
+  - caption: "Storm damage repair"
+  - caption: "Commercial flat roof"
+services_seo_description: "{brand_name} provides professional roofing installation, repair, and inspection services with photo documentation and manufacturer-backed warranties."

@@ -1,0 +1,8 @@
+slot: service_area_list
+required_vars:
+  - page_extension
+  - service_area_list_heading
+  - service_area_list_intro
+  - service_area_links
+variants:
+  - service_area_list_1.html

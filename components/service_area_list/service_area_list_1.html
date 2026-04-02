@@ -1,0 +1,12 @@
+<section class="block service-area-list">
+  <div class="container">
+    <h2>{{ service_area_list_heading }}</h2>
+    <p>{{ service_area_list_intro }}</p>
+    <ul style="columns:2;column-gap:2rem;margin:0.75rem 0 0;padding-left:1.1rem;">
+      {% for z in service_area_links %}
+      <li style="break-inside:avoid;"><a href="{{ z.href }}">{{ z.label }}</a></li>
+      {% endfor %}
+    </ul>
+    <p style="margin-top:1rem;"><a href="contact.{{ page_extension }}">Questions about coverage?</a></p>
+  </div>
+</section>

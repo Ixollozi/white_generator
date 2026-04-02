@@ -1,0 +1,81 @@
+<section class="block">
+  <div class="container">
+    <h2 style="margin:0 0 0.35rem;">Product details</h2>
+    <p class="muted" style="margin:0 0 1.25rem;">Full descriptions, fit notes, and sizing — add to cart from any item below.</p>
+    {% if products and products|length %}
+    {% for product in products %}
+    {% if product.slug %}
+    <section id="p-{{ product.slug }}" class="card" style="margin:0 0 1.5rem;padding:1.25rem;">
+      <div class="grid" style="grid-template-columns:1.1fr 0.9fr;gap:1.25rem;align-items:start;">
+        <div>
+          <div style="border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;background:#f8fafc;">
+            <img src="{{ product.image_src }}" alt="{{ product.title }}" style="display:block;width:100%;height:min(420px,55vw);object-fit:cover;">
+          </div>
+        </div>
+        <div>
+          <h3 style="margin:0 0 0.4rem;">{{ product.title }}</h3>
+          <p class="muted" style="margin:0 0 0.6rem;">{{ product.material }} · {{ product.color }} · SKU {{ product.sku }}</p>
+          <p style="margin:0 0 0.85rem;font-size:1.15rem;"><strong>${{ '%.0f'|format(product.price) }}</strong> <span class="muted" style="font-size:0.95rem;">{{ product.currency }}</span></p>
+          <p style="margin:0 0 0.85rem;">{{ product.description }}</p>
+          <p class="muted" style="margin:0 0 0.75rem;"><strong>Fit notes:</strong> {{ product.fit_notes }}</p>
+          <p class="muted" style="margin:0 0 0.85rem;"><strong>Care:</strong> {{ product.care }}</p>
+          {% if product.sizes %}
+          <label style="display:block;margin:0 0 0.75rem;">
+            <span class="muted" style="display:block;margin-bottom:0.35rem;">Size</span>
+            <select id="shop-size-{{ product.slug }}" style="width:100%;padding:0.5rem;border:1px solid #e5e7eb;border-radius:10px;">
+              {% for s in product.sizes %}
+              <option value="{{ s }}">{{ s }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          {% endif %}
+          <button type="button" class="btn shop-detail-add" style="width:100%;"
+            data-sku="{{ product.sku }}"
+            data-title="{{ product.title }}"
+            data-price="{{ product.price }}"
+            data-currency="{{ product.currency }}"
+            data-size-select="shop-size-{{ product.slug }}"
+            data-msg-for="shop-msg-{{ product.slug }}">Add to cart</button>
+          <p class="muted" id="shop-msg-{{ product.slug }}" style="margin:0.65rem 0 0;font-size:0.9rem;"></p>
+          <p style="margin:0.85rem 0 0;"><a class="btn" href="cart.{{ page_extension }}" style="width:100%;background:#111827;">View cart</a></p>
+        </div>
+      </div>
+    </section>
+    {% endif %}
+    {% endfor %}
+    {% endif %}
+  </div>
+</section>
+
+<script>
+(function(){
+  function readCart(){ try{ return JSON.parse(localStorage.getItem('cart_v1')||'[]')||[]; }catch(e){ return []; } }
+  function writeCart(items){ try{ localStorage.setItem('cart_v1', JSON.stringify(items||[])); }catch(e){} }
+  function addItem(it){
+    var items = readCart();
+    var found = items.find(function(x){ return x && x.sku === it.sku && x.size === it.size; });
+    if(found){ found.qty = (found.qty||1) + 1; }
+    else { items.push({ sku: it.sku, title: it.title, price: it.price, currency: it.currency, size: it.size||'', qty: 1 }); }
+    writeCart(items);
+  }
+  var btns = document.querySelectorAll('.shop-detail-add');
+  if(!btns || !btns.length) return;
+  btns.forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var sid = btn.getAttribute('data-size-select')||'';
+      var sizeEl = sid ? document.getElementById(sid) : null;
+      var size = sizeEl ? (sizeEl.value||'') : '';
+      addItem({
+        sku: btn.getAttribute('data-sku')||'',
+        title: btn.getAttribute('data-title')||'Item',
+        price: parseFloat(btn.getAttribute('data-price')||'0')||0,
+        currency: btn.getAttribute('data-currency')||'USD',
+        size: size
+      });
+      var mid = btn.getAttribute('data-msg-for')||'';
+      var msg = mid ? document.getElementById(mid) : null;
+      if(msg) msg.textContent = 'Added to cart.';
+    });
+  });
+})();
+</script>

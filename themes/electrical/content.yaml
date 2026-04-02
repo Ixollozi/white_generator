@@ -1,0 +1,20 @@
+testimonials_heading: Client reviews
+testimonial_items:
+  - quote: "Panel upgrade was done in a day. Everything labeled, everything permitted."
+    name: "Andrew H."
+    role: "Homeowner"
+  - quote: "They found the intermittent fault three other electricians missed."
+    name: "Carol N."
+    role: "Homeowner"
+  - quote: "Clean work, on time, and the estimate was accurate to the dollar."
+    name: "Jason M."
+    role: "Contractor"
+faq_heading: Electrical FAQ
+faq_items:
+  - q: "Do you pull permits?"
+    a: "Yes — all work requiring permits is filed and inspected per local code requirements."
+  - q: "Can you install EV chargers?"
+    a: "We're certified installers for Level 2 residential and commercial EV charging stations."
+  - q: "Do you offer emergency service?"
+    a: "We provide same-day emergency response for outages, sparking, and safety hazards."
+services_seo_description: "{brand_name} provides licensed electrical services including wiring, panel upgrades, lighting installation, and safety inspections."
