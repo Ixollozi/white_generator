@@ -1,12 +1,15 @@
 <section class="block testimonials testimonials--stack">
   <div class="container narrow">
     <h2>{{ testimonials_heading }}</h2>
+    {% if reviews_profile_url %}
+    <p class="testimonials-maps-cta"><a href="{{ reviews_profile_url }}" rel="noopener noreferrer">Read reviews on Google Maps</a></p>
+    {% endif %}
     <ul class="testimonial-list">
       {% for t in testimonial_items %}
       <li class="testimonial-row">
         {% if t.rating %}<p class="stars" style="letter-spacing:0.08em;">{{ t.rating }}</p>{% endif %}
         <p class="quote">“{{ t.quote }}”</p>
-        <p class="attr"><span class="name">{{ t.name }}</span>, {{ t.role }}</p>
+        <p class="attr"><span class="name">{{ t.name }}</span>, {{ t.role }}{% if t.source_label %} · <span class="review-source">{{ t.source_label }}</span>{% endif %}</p>
       </li>
       {% endfor %}
     </ul>

@@ -1,6 +1,9 @@
 <section class="block testimonials testimonials--cards">
   <div class="container">
     <h2>{{ testimonials_heading }}</h2>
+    {% if reviews_profile_url %}
+    <p class="testimonials-maps-cta" style="margin:0 0 1rem;"><a href="{{ reviews_profile_url }}" rel="noopener noreferrer">Read reviews on Google Maps</a></p>
+    {% endif %}
     <div class="t-carousel" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem;">
       {% for t in testimonial_items %}
       <article class="card" style="padding:1rem;border:1px solid #e5e7eb;border-radius:12px;">
@@ -9,7 +12,7 @@
         {% endif %}
         <p style="margin:0 0 0.5rem;font-size:0.95rem;">{{ t.quote }}</p>
         <p style="margin:0;font-weight:600;">{{ t.name }}{% if t.city %}, {{ t.city }}{% endif %}</p>
-        <p style="margin:0;font-size:0.85rem;color:#64748b;">{{ t.role }} · {{ t.rating }}</p>
+        <p style="margin:0;font-size:0.85rem;color:#64748b;">{{ t.role }}{% if t.source_label %} · {{ t.source_label }}{% endif %} · {{ t.rating }}</p>
       </article>
       {% endfor %}
     </div>

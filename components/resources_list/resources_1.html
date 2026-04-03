@@ -7,6 +7,6 @@
       <li><a href="{{ r.url }}" rel="nofollow noopener noreferrer" target="_blank">{{ r.title }}</a> — {{ r.note }}</li>
       {% endfor %}
     </ul>
-    <p style="margin-top:1.25rem;"><a href="blog.{{ page_extension }}">Read our blog</a> for longer guides.</p>
+    {% if insights_href %}<p style="margin-top:1.25rem;"><a href="{{ insights_href }}">Browse our {{ insights_label }}</a> for longer guides.</p>{% endif %}
   </div>
 </section>

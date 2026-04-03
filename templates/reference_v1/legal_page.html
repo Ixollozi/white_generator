@@ -27,22 +27,34 @@
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="manifest" href="site.webmanifest">
   <link rel="stylesheet" href="css/style.css">
+  <style>
+    :root {
+      --color-accent: {{ accent_color }};
+      --color-accent-hover: {{ accent_hover_color }};
+      --color-accent-contrast: {{ accent_contrast_color }};
+      --color-link: {{ brand_link_color }};
+      --color-cookie-btn-bg: {{ cookie_button_bg_color }};
+    }
+    body { font-family: {{ body_font_family | safe }}; }
+    h1, h2, h3 { font-family: {{ heading_font_family | safe }}; }
+  </style>
   <link rel="stylesheet" href="css/core.css">
   <link rel="stylesheet" href="css/layout.css">
   <link rel="stylesheet" href="css/vendor.css">
   <link rel="stylesheet" href="css/reference.css">
-  <style>body { font-family: {{ body_font_family | safe }}; } h1,h2,h3 { font-family: {{ heading_font_family | safe }}; }</style>
 </head>
 <body class="reference-site{% if body_extra_class %} {{ body_extra_class }}{% endif %}">
   {% if promo_banner_text %}
-  <div class="promo-banner" style="background:#111827;color:#f9fafb;text-align:center;padding:0.4rem;font-size:0.9rem;">{{ promo_banner_text }}</div>
+  <div class="promo-banner">{{ promo_banner_text }}</div>
   {% endif %}
   <main class="site-main">
-    <div class="container nav-row" style="padding:0.5rem 0;display:flex;flex-wrap:wrap;align-items:center;gap:1rem;">
+    <div class="container nav-row reference-nav-row">
       <a class="logo" href="{% if page_extension == 'php' %}index.php{% else %}index.{{ page_extension }}{% endif %}">{% if logo_src %}<img src="{{ logo_src }}" alt="{{ brand_name }}" width="150" height="36">{% else %}{{ brand_name }}{% endif %}</a>
+      <nav class="reference-nav" aria-label="Primary">
       {% for link in nav_items %}
       <a href="{{ link.href }}">{{ link.label }}</a>{% if not loop.last %} · {% endif %}
       {% endfor %}
+      </nav>
     </div>
     <div class="container legal" style="max-width:720px;margin:0 auto;padding:1rem;">
       <h1>{{ legal_title }}</h1>

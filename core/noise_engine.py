@@ -119,36 +119,37 @@ def write_layout_css_bundle(site_dir: Path) -> list[str]:
     # Keep these bundles non-trivial so archives don't look like placeholders.
     core = (
         "/* core */\n"
-        ":root{--bundle:1;--radius:12px;--fg:#0f172a;--muted:#64748b;--bg:#ffffff;--border:#e5e7eb;}\n"
+        ":root{--bundle:1;--radius:var(--radius-md,12px)}\n"
         "*,*::before,*::after{box-sizing:border-box}\n"
         "html{line-height:1.5;-webkit-text-size-adjust:100%}\n"
-        "body{margin:0;color:var(--fg);background:var(--bg)}\n"
-        "a{color:inherit}\n"
+        "body{margin:0;color:var(--color-text);background:var(--color-bg)}\n"
+        "a{color:var(--color-link)}\n"
         "img{max-width:100%;height:auto}\n"
         ".container{max-width:1120px;margin:0 auto;padding:0 16px}\n"
-        ".btn{display:inline-flex;align-items:center;justify-content:center;gap:.4rem;padding:.55rem .9rem;border-radius:10px;border:1px solid var(--border);background:#0f172a;color:#fff;text-decoration:none}\n"
-        ".card{border:1px solid var(--border);border-radius:var(--radius);background:#fff;padding:1rem}\n"
-        ".muted{color:var(--muted)}\n"
+        ".btn{display:inline-flex;align-items:center;justify-content:center;gap:.4rem;padding:.55rem .9rem;border-radius:var(--radius-sm,10px);border:1px solid var(--color-border);background:var(--color-accent);color:var(--color-accent-contrast);text-decoration:none}\n"
+        ".btn:hover{background:var(--color-accent-hover)}\n"
+        ".card{border:1px solid var(--color-border);border-radius:var(--radius);background:var(--color-surface);padding:1rem}\n"
+        ".muted{color:var(--color-muted)}\n"
         ".grid{display:grid;gap:1rem}\n"
         "@media (min-width:900px){.grid.three{grid-template-columns:repeat(3,1fr)}}\n"
         ".sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}\n"
     )
     layout = (
         "/* layout */\n"
-        ".site-header{position:sticky;top:0;background:rgba(255,255,255,.92);backdrop-filter:saturate(180%) blur(10px);border-bottom:1px solid var(--border);z-index:10}\n"
+        ".site-header{position:sticky;top:0;background:var(--color-header-bg);backdrop-filter:var(--header-backdrop-filter,none);-webkit-backdrop-filter:var(--header-backdrop-filter,none);border-bottom:1px solid var(--color-border);z-index:10}\n"
         ".header-inner{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:.5rem 0}\n"
         ".logo{display:inline-flex;align-items:center;font-weight:800;text-decoration:none;color:inherit}\n"
         ".logo img{height:36px;width:auto;display:block}\n"
         ".nav{display:flex;flex-wrap:wrap;gap:.8rem;align-items:center}\n"
         ".site-main{min-height:40vh}\n"
         ".block{padding:2rem 0}\n"
-        ".footer{border-top:1px solid var(--border)}\n"
+        ".footer{border-top:1px solid var(--color-border)}\n"
         ".footer-row{display:flex;flex-wrap:wrap;gap:1rem;align-items:center;justify-content:space-between}\n"
     )
     vendor = (
         "/* vendor */\n"
         "/* reserved for third-party css resets/utilities */\n"
-        "@supports (text-wrap: balance){h1,h2{text-wrap:balance}}\n"
+        "@supports (text-wrap: balance){h1,h2,h3{text-wrap:balance}}\n"
     )
     files: list[tuple[str, str]] = [("core.css", core), ("layout.css", layout), ("vendor.css", vendor)]
     out: list[str] = []

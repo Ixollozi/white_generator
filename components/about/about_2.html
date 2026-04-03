@@ -3,7 +3,7 @@
     <h2>{{ about_heading }}</h2>
     <div class="card">
       <p>{{ about_body }}</p>
-      <p style="margin-top:1rem;font-size:0.95rem;"><a href="blog.{{ page_extension }}">Blog</a> · <a href="contact.{{ page_extension }}">Contact</a></p>
+      <p style="margin-top:1rem;font-size:0.95rem;">{% if insights_href %}<a href="{{ insights_href }}">{{ insights_label }}</a> · {% endif %}<a href="contact.{{ page_extension }}">Contact</a></p>
     </div>
   </div>
 </section>

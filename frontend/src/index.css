@@ -245,8 +245,32 @@ a {
 
 .progress > div {
   height: 100%;
+  min-width: 0;
   background: linear-gradient(90deg, var(--accent), var(--accent-dim));
-  transition: width 0.2s ease;
+  transition: width 0.25s ease;
+}
+
+.progress--indeterminate > div {
+  width: 38%;
+  border-radius: inherit;
+  animation: progress-slide 1.15s ease-in-out infinite;
+}
+
+@keyframes progress-slide {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(320%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .progress--indeterminate > div {
+    animation: none;
+    width: 100%;
+    opacity: 0.35;
+  }
 }
 
 .toast {

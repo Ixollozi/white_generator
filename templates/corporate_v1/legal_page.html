@@ -27,14 +27,24 @@
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="manifest" href="site.webmanifest">
   <link rel="stylesheet" href="css/style.css">
+  <style>
+    :root {
+      --color-accent: {{ accent_color }};
+      --color-accent-hover: {{ accent_hover_color }};
+      --color-accent-contrast: {{ accent_contrast_color }};
+      --color-link: {{ brand_link_color }};
+      --color-cookie-btn-bg: {{ cookie_button_bg_color }};
+    }
+    body { font-family: {{ body_font_family | safe }}; }
+    h1, h2, h3 { font-family: {{ heading_font_family | safe }}; }
+  </style>
   <link rel="stylesheet" href="css/core.css">
   <link rel="stylesheet" href="css/layout.css">
   <link rel="stylesheet" href="css/vendor.css">
-  <style>body { font-family: {{ body_font_family | safe }}; } h1,h2,h3 { font-family: {{ heading_font_family | safe }}; }</style>
 </head>
 <body class="site-body{% if body_extra_class %} {{ body_extra_class }}{% endif %}">
   {% if promo_banner_text %}
-  <div class="promo-banner" style="background:#111827;color:#f9fafb;text-align:center;padding:0.4rem;font-size:0.9rem;">{{ promo_banner_text }}</div>
+  <div class="promo-banner">{{ promo_banner_text }}</div>
   {% endif %}
   <header class="site-header">
     <div class="container header-inner">

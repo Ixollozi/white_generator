@@ -210,6 +210,76 @@ def _pick_strategy_weighted(rng: random.Random) -> str:
     return rng.choices(opts, weights=wts, k=1)[0]
 
 
+def _hsl_to_hex(h: float, s: float, light: float) -> str:
+    """h 0-360, s and light 0-100 → #rrggbb."""
+    h = (h % 360.0) / 360.0
+    s = max(0.0, min(100.0, s)) / 100.0
+    light = max(0.0, min(100.0, light)) / 100.0
+
+    def hue2rgb(p: float, q: float, t: float) -> float:
+        if t < 0:
+            t += 1.0
+        if t > 1:
+            t -= 1.0
+        if t < 1.0 / 6:
+            return p + (q - p) * 6.0 * t
+        if t < 0.5:
+            return q
+        if t < 2.0 / 3:
+            return p + (q - p) * (2.0 / 3 - t) * 6.0
+        return p
+
+    if s == 0:
+        r = g = b = light
+    else:
+        q = light * (1.0 + s) if light < 0.5 else light + s - light * s
+        p = 2.0 * light - q
+        r = hue2rgb(p, q, h + 1.0 / 3)
+        g = hue2rgb(p, q, h)
+        b = hue2rgb(p, q, h - 1.0 / 3)
+    return f"#{int(round(r * 255)):02x}{int(round(g * 255)):02x}{int(round(b * 255)):02x}"
+
+
+def _relative_luminance(hex_rgb: str) -> float:
+    h = (hex_rgb or "").lstrip("#")
+    if len(h) != 6:
+        return 0.5
+
+    def ch(i: int) -> float:
+        v = int(h[i : i + 2], 16) / 255.0
+        return v / 12.92 if v <= 0.03928 else ((v + 0.055) / 1.055) ** 2.4
+
+    r, g, b = ch(0), ch(2), ch(4)
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+
+def _brand_palette_from_identity(ident: str) -> dict[str, str]:
+    """Deterministic accent palette per site (overrides CSS :root via layout)."""
+    h_raw = int(hashlib.sha256(f"palette|{ident}".encode("utf-8")).hexdigest(), 16)
+    hue = float(h_raw % 360)
+    sat = 52.0 + float((h_raw >> 9) % 28)
+    lit = 40.0 + float((h_raw >> 17) % 22)
+    accent = _hsl_to_hex(hue, sat, lit)
+    hover = _hsl_to_hex(hue, min(100.0, sat + 6.0), max(24.0, lit - 12.0))
+    lum = _relative_luminance(accent)
+    contrast = "#ffffff" if lum < 0.45 else "#0f172a"
+    link_lit = max(30.0, lit - 8.0)
+    brand_link = _hsl_to_hex(hue, min(100.0, sat + 5.0), link_lit)
+    m_opts = ("#ffffff", "#fafafa", "#f8fafc", "#fffdfb", "#fefce8")
+    manifest_bg = m_opts[(h_raw >> 3) % len(m_opts)]
+    return {
+        "accent_color": accent,
+        "accent_hover_color": hover,
+        "accent_contrast_color": contrast,
+        "brand_link_color": brand_link,
+        "cookie_button_bg_color": accent,
+        "manifest_theme_color": accent,
+        "manifest_background_color": manifest_bg,
+        "favicon_bg_color": accent,
+        "favicon_fg_color": contrast,
+    }
+
+
 def _initials_from_identity(site_identity: str, k: int = 3) -> str:
     h = hashlib.sha256(f"ini|{site_identity}".encode()).hexdigest().upper()
     letters = "ABCDEFGHJKLMNPRSTUVWXYZ"
@@ -417,6 +487,67 @@ _PROMO_MARKETING: tuple[str, ...] = (
     "We decline rush audits without data access; guesses aren’t billable.",
     "Pre-launch schema and monitoring checks are included in every go-live package we sign.",
 )
+_PROMO_CONSULTING: tuple[str, ...] = (
+    "Workshops in {city} this month focus on operating cadence — no slide-only engagements.",
+    "Strategy sprints include a written decision log so leadership stays aligned after we leave.",
+    "We do not quote fixed fees without a short diagnostic — use Contact with goals and constraints.",
+    "Quarterly reviews compare plan vs reality; retainers do not auto-renew without a fresh scope.",
+)
+_PROMO_LEGAL: tuple[str, ...] = (
+    "Initial consults include a plain-English scope note before any filings or court dates.",
+    "Document review slots open each Monday — Contact with matter type, jurisdiction, and deadline.",
+    "Refer another organization: {brand_name} runs conflicts before any shared work begins.",
+    "Rush filings are quoted only after we confirm court and service windows in writing.",
+)
+_PROMO_ACCOUNTING: tuple[str, ...] = (
+    "Year-end packages for businesses in {city}: book early to reserve your close-and-file window.",
+    "CRA correspondence bundles include a one-page summary so owners see what was sent and why.",
+    "GST/HST reconciliations booked this quarter include a short walkthrough with your bookkeeper.",
+    "T4 season: payroll clients receive draft packages two weeks before the legal deadline.",
+)
+_PROMO_REAL_ESTATE: tuple[str, ...] = (
+    "Buyer orientations in {city} include comparable sales prep before you tour — book via Contact.",
+    "Listing kits this season bundle photography guidance and disclosure checklists.",
+    "Open houses are scheduled with parking notes for neighbors and visitors.",
+    "Refer a seller: both sides receive a written timeline before offers go live.",
+)
+_PROMO_DENTAL: tuple[str, ...] = (
+    "New-patient hygiene openings this month in {city} — call to reserve a chair.",
+    "Insurance estimates run before treatment plans; optional work gets a separate waiver.",
+    "Family block appointments on Thursday afternoons — mention this banner when you book.",
+    "Whitening consults include shade goals and sensitivity screening upfront.",
+)
+_PROMO_MEDICAL: tuple[str, ...] = (
+    "Same-week intake slots for new patients in {city} when capacity allows — phone first.",
+    "After-visit summaries go to your portal; paper copies on request at the desk.",
+    "Flu clinic hours posted weekly; walk-ins limited when vaccine supply is tight.",
+    "Referrals: please bring imaging discs or portal links to avoid duplicate tests.",
+)
+_PROMO_TRADES: tuple[str, ...] = (
+    "Same-week openings for recurring work in {city} — call dispatch with your {activity} details.",
+    "Emergency line staffed until 8pm weekdays; after-hours rates posted before we roll.",
+    "Seasonal tune-ups for {city} homes: ask about bundled inspections before peak load.",
+    "Written estimates before we mobilize — scope and labor are itemized on the first quote.",
+    "{brand_name} holds arrival windows in {city}; text-back updates when the truck is en route.",
+    "First-time {activity} visits in {city} include a walkthrough so expectations match the invoice.",
+    "Recurring clients in {city} get a named lead on the file — not a different voice every visit.",
+    "Equipment and parts for {activity} are confirmed in stock before we book your slot.",
+    "HOA and building rules in {city} are verified before we book roof or facade access.",
+    "Photo documentation available on request for insurance and warranty files in {city}.",
+    "Weekend dispatch in {city} is limited — book {activity} service early for Saturday slots.",
+    "Ask about multi-point checks: {brand_name} bundles what often fails together in {city} weather.",
+)
+
+
+def _format_promo_line(raw: str, *, brand_name: str, city: str, activity: str) -> str:
+    try:
+        return raw.format(
+            brand_name=brand_name,
+            city=city or "the area",
+            activity=activity or "our services",
+        )
+    except (KeyError, ValueError, IndexError):
+        return raw
 
 
 def _promo_pool(vertical_id: str) -> tuple[str, ...]:
@@ -425,8 +556,18 @@ def _promo_pool(vertical_id: str) -> tuple[str, ...]:
         return _PROMO_NEWS
     if v == "marketing_agency":
         return _PROMO_MARKETING
-    if v in ("consulting", "legal", "accounting", "real_estate"):
-        return _PROMO_MARKETING
+    if v == "consulting":
+        return _PROMO_CONSULTING
+    if v == "legal":
+        return _PROMO_LEGAL
+    if v == "accounting":
+        return _PROMO_ACCOUNTING
+    if v == "real_estate":
+        return _PROMO_REAL_ESTATE
+    if v == "dental":
+        return _PROMO_DENTAL
+    if v == "medical":
+        return _PROMO_MEDICAL
     if v == "clothing":
         return (
             "WELCOME10: 10% off your first order (select items).",
@@ -449,12 +590,7 @@ def _promo_pool(vertical_id: str) -> tuple[str, ...]:
         "auto_repair",
         "electrical",
     ):
-        return (
-            "Same-week openings for recurring route clients — call dispatch for the next window.",
-            "Emergency calls answered until 8pm on weekdays; after-hours rates apply.",
-            "Winter readiness visits: ask about bundled inspections before peak season.",
-            "Written estimates before we mobilize — no surprise line items on the first invoice.",
-        )
+        return _PROMO_TRADES
     return _PROMO_DEFAULT_PROFESSIONAL
 
 
@@ -493,8 +629,9 @@ def _review_count(site_identity: str) -> int:
 
 def _review_avg(site_identity: str) -> str:
     h = int(hashlib.sha256(f"ra|{site_identity}".encode("utf-8")).hexdigest(), 16)
-    options = ["4.3", "4.4", "4.5", "4.6", "4.7", "4.8"]
-    return options[h % len(options)]
+    # 4.08 .. 4.97 in fine steps (less collision than six fixed strings).
+    v = 4.08 + (h % 900) / 1000.0
+    return f"{v:.2f}"
 
 
 def _cuisine_type(site_identity: str) -> str:
@@ -805,12 +942,24 @@ def generate_brand(
         hours["hours_weekday"] = f"Mon–Fri 9:00–18:00 ({tz})"
     founded_year = _founded_year(ident, year)
     promo_h = int(hashlib.sha256(f"promo|{ident}".encode("utf-8")).hexdigest(), 16)
-    _promos = _promo_pool(vid)
+    act_promo = str((vertical or {}).get("activity_summary") or "services").strip()
+    raw_promo_pool = (vertical or {}).get("promo_banner_candidates") if isinstance(vertical, dict) else None
+    if isinstance(raw_promo_pool, list) and raw_promo_pool:
+        cands = [_coerce_vertical_text(x) for x in raw_promo_pool if str(x).strip()]
+        _promos = tuple(cands) if cands else _promo_pool(vid)
+    else:
+        _promos = _promo_pool(vid)
     if vid == "news":
         promo_banner_text = ""
     else:
-        promo_banner_text = _promos[promo_h % len(_promos)]
+        promo_banner_text = _format_promo_line(
+            _promos[promo_h % len(_promos)],
+            brand_name=name,
+            city=city,
+            activity=act_promo,
+        )
     gfont_url, body_ff, head_ff = _pick_font_stack(ident)
+    palette = _brand_palette_from_identity(ident)
     handle = ((_slug_domain(name) or "brand")[:22]).strip("-") or "brand"
     soc_tw = soc_li = soc_fb = soc_ig = soc_tt = ""
     if vid == "news":
@@ -840,7 +989,12 @@ def generate_brand(
     client_type = _VERTICAL_CLIENT_TYPE.get(vid, "B2C")
     price_pool = _VERTICAL_PRICE_RANGE.get(vid, ("Varies",))
     price_range = localize_money_labels(rng.choice(price_pool), country)
-    service_area_zones = pick_districts_for_site(ident, city, rng.randint(5, 12), brand_name=name)
+    zone_n = rng.choices(
+        population=[3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+        weights=[6, 10, 14, 14, 12, 10, 8, 8, 6, 4],
+        k=1,
+    )[0]
+    service_area_zones = pick_districts_for_site(ident, city, zone_n, brand_name=name)
     zones_preview = ", ".join(service_area_zones[:10])
     if len(service_area_zones) > 10:
         zones_preview += ", and nearby areas"
@@ -906,6 +1060,7 @@ def generate_brand(
         "social_linkedin": soc_li,
         "review_count": _review_count(ident),
         "review_avg": _review_avg(ident),
+        "reviews_profile_url": maps_search_url,
         "cuisine_type": _cuisine_type(ident) if vid == "cafe_restaurant" else "",
         **hours,
         "timezone_abbrev": tz,
@@ -915,5 +1070,6 @@ def generate_brand(
         "google_fonts_stylesheet_url": gfont_url,
         "body_font_family": body_ff,
         "heading_font_family": head_ff or body_ff,
+        **palette,
     }
     return merge_geo_into_brand(brand_out, brand_cfg)

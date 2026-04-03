@@ -3,8 +3,8 @@
     <h2>{{ about_heading }}</h2>
     <p>{{ about_body }}</p>
     <p class="see-also" style="margin-top:1rem;font-size:0.95rem;">
-      Explore <a href="services.{{ page_extension }}">{{ about_services_short_label }}</a>,
-      read <a href="blog.{{ page_extension }}">updates</a>, or
+      Explore <a href="services.{{ page_extension }}">{{ about_services_short_label }}</a>{% if insights_href %},
+      see <a href="{{ insights_href }}">{{ insights_label }}</a>{% endif %}, or
       <a href="contact.{{ page_extension }}">contact us</a>.
     </p>
   </div>

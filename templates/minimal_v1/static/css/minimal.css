@@ -1,10 +1,11 @@
 .minimal-theme {
-  --accent: #0d9488;
+  --accent: var(--color-accent, #0d9488);
 }
+.minimal-theme .gallery-heading-minimal { margin-bottom: 0.6rem; }
 .minimal-theme .wrap { max-width: 720px; margin: 0 auto; padding: 2rem; }
 .minimal-header {
-  background: #fff;
-  border-bottom: 1px solid #e5e7eb;
+  background: var(--color-header-bg, #fff);
+  border-bottom: 1px solid var(--color-minimal-header-border, #e5e7eb);
 }
 .minimal-header .header-row {
   display: flex;
@@ -14,12 +15,13 @@
 }
 .minimal-header .logo { font-weight: 800; text-decoration: none; color: inherit; display: inline-flex; align-items: center; }
 .minimal-header .logo img { height: 36px; width: auto; display: block; }
-.minimal-header nav a { color: #0f766e; }
+.minimal-header nav a { color: var(--color-link, #0f766e); }
 body.header-sticky .minimal-header,
 body.site-sticky-header .minimal-header {
   position: sticky;
   top: 0;
   z-index: 40;
-  background: rgba(255, 255, 255, 0.96);
-  backdrop-filter: blur(8px);
+  background: var(--color-header-bg, rgba(255, 255, 255, 0.96));
+  backdrop-filter: var(--header-backdrop-filter, blur(8px));
+  -webkit-backdrop-filter: var(--header-backdrop-filter, blur(8px));
 }

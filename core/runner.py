@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from generators.brand_generator import generate_brand
-from generators.content_generator import fill_content, load_verticals, pick_vertical
+from generators.content_generator import build_service_area_page_html, fill_content, load_verticals, pick_vertical
 from integrations.tracking import build_tracking_snippet
 
 from core.build_manifest import write_build_manifest
@@ -45,6 +45,7 @@ from core.newsroom_policies import newsroom_policy_html
 from core.site_builder import compose_pages
 from core.site_context import SiteContext
 from core.public_url import effective_public_base_url
+from core.site_coherence import validate_site_coherence
 from core.theme_pack import load_theme_pack, theme_folder_for_vertical
 from core.template_loader import load_template_manifest, make_template_env
 from core.trust_policies import trust_policy_html
@@ -94,6 +95,26 @@ def _adjust_nav_for_structure(
             item["href"] = f"resources.{ext}"
             if str(item.get("label") or "").strip().lower() == "blog":
                 item["label"] = "Resources"
+
+
+def _dedupe_nav_items_by_href(nav: list[dict[str, str]]) -> None:
+    """Один href в навигации один раз (после remap services→industries / blog→resources и доп. пунктов)."""
+    seen_h: set[str] = set()
+    seen_pair: set[tuple[str, str]] = set()
+    i = 0
+    while i < len(nav):
+        h = str(nav[i].get("href") or "").strip()
+        lb = str(nav[i].get("label") or "").strip()
+        pair = (h.lower(), lb.lower())
+        if not h:
+            nav.pop(i)
+            continue
+        if h in seen_h or pair in seen_pair:
+            nav.pop(i)
+            continue
+        seen_h.add(h)
+        seen_pair.add(pair)
+        i += 1
 
 
 def _augment_nav_items(
@@ -150,10 +171,12 @@ def _pick_template(rng: random.Random, templates_dir: Path, allowed: list[str]) 
 def _write_brand_site_extras(site_dir: Path, brand: dict[str, Any]) -> None:
     name = str(brand.get("brand_name") or "Site")
     letter = (name.strip()[:1] or "S").upper()
+    fav_bg = str(brand.get("favicon_bg_color") or brand.get("accent_color") or "#0f172a")
+    fav_fg = str(brand.get("favicon_fg_color") or brand.get("accent_contrast_color") or "#f8fafc")
     svg = (
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">'
-        '<rect fill="#0f172a" width="64" height="64" rx="14"/>'
-        f'<text x="32" y="41" font-size="34" text-anchor="middle" fill="#f8fafc" '
+        f'<rect fill="{fav_bg}" width="64" height="64" rx="14"/>'
+        f'<text x="32" y="41" font-size="34" text-anchor="middle" fill="{fav_fg}" '
         f'font-family="Segoe UI,system-ui,sans-serif">{letter}</text></svg>'
     )
     (site_dir / "favicon.svg").write_text(svg, encoding="utf-8")
@@ -169,8 +192,8 @@ def _write_brand_site_extras(site_dir: Path, brand: dict[str, Any]) -> None:
         "icons": icons,
         "start_url": "/",
         "display": "standalone",
-        "background_color": "#ffffff",
-        "theme_color": "#0f172a",
+        "background_color": str(brand.get("manifest_background_color") or "#ffffff"),
+        "theme_color": str(brand.get("manifest_theme_color") or "#0f172a"),
     }
     (site_dir / "site.webmanifest").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
 
@@ -259,6 +282,7 @@ def generate_one_site(
         page_keys = [k for k in page_keys if k not in ("shop", "cart", "checkout")]
         manifest_pages = {k: v for k, v in (manifest.get("pages") or {}).items() if k in page_keys}
         manifest_for_build = {**manifest, "pages": manifest_pages}
+    ctx.meta["page_keys"] = list(page_keys)
     theme_pack = load_theme_pack(project_root, str(vdef.get("id") or ""))
     nav_built = _augment_nav_items(
         theme_pack["nav_items"],
@@ -267,6 +291,7 @@ def generate_one_site(
         str(vdef.get("id") or ""),
     )
     _adjust_nav_for_structure(nav_built, page_keys, page_ext)
+    _dedupe_nav_items_by_href(nav_built)
     ctx.meta["nav_items"] = nav_built
     ctx.meta["index_slot_extras"] = theme_pack["index_extras"]
     ctx.meta["index_slot_inject_before"] = theme_pack["inject_before"]
@@ -319,6 +344,7 @@ def generate_one_site(
             news_options=news_opts,
         ),
     )
+    validate_site_coherence(ctx.brand, ctx.content, strict=bool(cfg.get("coherence_strict")))
     _img_cfg = cfg.get("images") if isinstance(cfg.get("images"), dict) else {}
     materialize_gallery_images(site_dir, ctx.content, rng, ctx.brand, images_cfg=_img_cfg)
     materialize_site_visuals(
@@ -739,31 +765,27 @@ def generate_one_site(
         for zone in service_zones:
             zone_slug = re.sub(r"[^a-z0-9]+", "-", zone.lower()).strip("-")
             sa_key = f"service-area-{zone_slug}"
-            svc_list_html = ""
-            if isinstance(svc_items, list) and svc_items:
-                items_html = "".join(
-                    f"<li><strong>{s.get('title', '')}</strong>: {s.get('text', '')}</li>"
-                    for s in svc_items if isinstance(s, dict)
-                )
-                svc_list_html = f"<ul>{items_html}</ul>"
-            body_content = (
-                f"<section class='block'><div class='container narrow'>"
-                f"<h1>{activity_sa.title()} in {zone}</h1>"
-                f"<p>{brand_nm_sa} provides professional {activity_sa} throughout {zone} and surrounding areas. "
-                f"Our team has been serving the {zone} community since {ctx.brand.get('founded_year', 2015)}, "
-                f"delivering consistent results backed by local knowledge and responsive scheduling.</p>"
-                f"<h2>Our services in {zone}</h2>"
-                f"{svc_list_html}"
-                f"<h2>Why choose {brand_nm_sa} in {zone}?</h2>"
-                f"<p>Local presence means faster response times, familiarity with area-specific needs, "
-                f"and a team that values its reputation in the community. Contact us to discuss your "
-                f"requirements in {zone}.</p>"
-                f"<p><a href='contact.{page_ext}' class='btn'>Get a quote for {zone}</a></p>"
-                f"</div></section>"
+            body_content = build_service_area_page_html(
+                zone,
+                brand_name=str(brand_nm_sa),
+                activity=activity_sa,
+                founded_year=ctx.brand.get("founded_year", 2015),
+                page_ext=page_ext,
+                service_items=svc_items if isinstance(svc_items, list) else [],
+                vertical_id=vid_sa,
+                rng=rng,
+                city=str(ctx.brand.get("city") or ""),
+                brand=ctx.brand if isinstance(ctx.brand, dict) else None,
             )
             sa_fname = f"service-area-{zone_slug}.{page_ext}"
             sa_title = f"{activity_sa.title()} in {zone} — {brand_nm_sa}"
-            sa_desc = f"{brand_nm_sa} offers {activity_sa} in {zone}. Local team, responsive scheduling."
+            sa_desc = rng.choice(
+                [
+                    f"{brand_nm_sa} offers {activity_sa} in {zone}. Written estimates and local scheduling.",
+                    f"{activity_sa.title()} for {zone} — {brand_nm_sa} with clear scopes and dispatch windows.",
+                    f"Book {activity_sa} in {zone}: crews familiar with the area and repeat work in the neighborhood.",
+                ]
+            )[:320]
             sa_canon = f"{effective_base}/{sa_fname}"
             # Register in SEO
             ctx.seo.setdefault("pages", {})[sa_key] = {
@@ -1107,6 +1129,8 @@ def generate_all(
         global_seed = int(global_seed)
 
     out: list[Path] = []
+    if on_progress is not None:
+        on_progress(0, count, cfg["output_path"])
     for i in range(count):
         per_seed = _site_seed(global_seed, i)
         cfg_merged = merge_config(cfg, {"_per_site_seed": per_seed})

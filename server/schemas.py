@@ -86,6 +86,10 @@ class GenerateRequest(BaseModel):
     theme: str = "default"
     seed: int | None = None
     strict_components: bool = False
+    coherence_strict: bool = Field(
+        default=False,
+        description="Abort generation if brand/domain conflicts with vertical_id or service copy",
+    )
     brand: BrandOptions | None = None
     seo: SeoOptions | None = None
     noise: NoiseOptions | None = None

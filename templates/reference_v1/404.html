@@ -47,7 +47,7 @@
     <p style="margin-top:1rem;">
       <a href="contact.{{ page_extension }}">Contact</a>
       · <a href="services.{{ page_extension }}">Services</a>
-      · <a href="blog.{{ page_extension }}">Blog</a>
+      {% if insights_href %}· <a href="{{ insights_href }}">{{ insights_label }}</a>{% endif %}
     </p>
   </main>
 </body>

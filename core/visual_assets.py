@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import random
+import re
 import shutil
 import urllib.error
 import urllib.request
@@ -49,6 +50,13 @@ def _fetch_jpeg(url: str, dest: Path, *, timeout: float = 22.0) -> bool:
 def _seed_part(rng: random.Random, *parts: str) -> str:
     raw = "|".join(parts) + str(rng.random())
     return hashlib.sha256(raw.encode()).hexdigest()[:16]
+
+
+def _team_photo_filename(index: int, display_name: str) -> str:
+    """Readable team portrait basename (no hex fingerprint in the filename)."""
+    chunk = re.sub(r"[^a-zA-Z0-9]+", "-", (display_name or "").strip().lower()).strip("-")
+    chunk = (chunk[:28] or "member").rstrip("-")
+    return f"team-{index + 1:02d}-{chunk}.jpg"
 
 
 _PORTRAIT_COLORS = [
@@ -235,8 +243,7 @@ def materialize_site_visuals(
                 continue
             nm = str(row.get("name") or "")
             initials = "".join(w[0].upper() for w in nm.split() if w)[:2] or "?"
-            portrait_slug = _seed_part(rng, "portrait", brand_nm, nm, str(i))[:12]
-            dest = tdir / f"portrait-{portrait_slug}.jpg"
+            dest = tdir / _team_photo_filename(i, nm)
             if src == "placeholder":
                 tw, th = rng.choice([(420, 420), (400, 500), (480, 480)])
                 seed_t = _seed_part(rng, "team", brand_nm, str(row.get("name")), str(i))

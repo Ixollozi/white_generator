@@ -74,6 +74,50 @@ _FIRST_IRISH: tuple[str, ...] = (
     "Eimear", "Fergal", "Grainne", "Kieran", "Maeve", "Niall", "Oisin", "Roisin", "Tiernan",
 )
 
+_FIRST_SINGAPORE: tuple[str, ...] = (
+    "Wei Ming",
+    "Jia En",
+    "Rahman",
+    "Siti",
+    "Kumar",
+    "Priya",
+    "Jun Wei",
+    "Hui Min",
+    "Arjun",
+    "Mei Ling",
+    "Darren",
+    "Nurul",
+    "Ethan",
+    "Shu Fen",
+    "Raj",
+    "Amanda",
+    "Li Xuan",
+    "Suresh",
+)
+
+_LAST_SINGAPORE: tuple[str, ...] = (
+    "Tan",
+    "Lim",
+    "Ng",
+    "Lee",
+    "Goh",
+    "Chua",
+    "Ong",
+    "Wong",
+    "Teo",
+    "Chan",
+    "Cheong",
+    "Ho",
+    "Koh",
+    "Ang",
+    "Yeo",
+    "Seah",
+    "Phua",
+    "Low",
+    "Sim",
+    "Tay",
+)
+
 _LAST_IRISH: tuple[str, ...] = (
     "Murphy", "Kelly", "O'Brien", "Ryan", "Walsh", "Byrne", "Doyle", "Lynch", "Clarke",
     "Flynn", "Quinn", "Moore", "Kennedy", "Brennan", "Carroll", "Sheehan", "Power", "Burke",
@@ -101,10 +145,19 @@ def _h(slot: str, site_key: str, salt: str) -> int:
     return int(hashlib.sha256(f"{salt}|{site_key}|{slot}".encode("utf-8")).hexdigest(), 16)
 
 
-def pick_full_name(site_key: str, slot: str, *, variant: str = "general") -> str:
+def pick_full_name(
+    site_key: str,
+    slot: str,
+    *,
+    variant: str = "general",
+    country: str | None = None,
+) -> str:
     """Stable full name for this site + logical slot (e.g. 'consulting|team|0')."""
-    if variant == "irish":
+    c = (country or "").strip()
+    if variant == "irish" or c == "Ireland":
         fi, la = _FIRST_IRISH, _LAST_IRISH
+    elif c == "Singapore":
+        fi, la = _FIRST_SINGAPORE, _LAST_SINGAPORE
     else:
         fi, la = _FIRST_GENERAL, _LAST_GENERAL
     h1 = _h(slot, site_key, "fn")
@@ -116,10 +169,19 @@ def pick_full_name(site_key: str, slot: str, *, variant: str = "general") -> str
     return f"{fn} {ln}"
 
 
-def pick_signature_name(site_key: str, slot: str, *, variant: str = "general") -> str:
+def pick_signature_name(
+    site_key: str,
+    slot: str,
+    *,
+    variant: str = "general",
+    country: str | None = None,
+) -> str:
     """Attribution like 'M. Patel' for testimonials."""
-    if variant == "irish":
+    c = (country or "").strip()
+    if variant == "irish" or c == "Ireland":
         fi, la = _FIRST_IRISH, _LAST_IRISH
+    elif c == "Singapore":
+        fi, la = _FIRST_SINGAPORE, _LAST_SINGAPORE
     else:
         fi, la = _FIRST_GENERAL, _LAST_GENERAL
     h1 = _h(slot, site_key, "sig-fn")

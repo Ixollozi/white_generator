@@ -54,6 +54,11 @@ class JobStore:
                 job.logs = job.logs[-400:]
 
     def run_generate(self, job: Job, payload: dict[str, Any]) -> None:
+        count_hint = max(1, int(payload.get("count") or 1))
+        with self._lock:
+            job.progress_total = count_hint
+            job.progress_done = 0
+
         def worker() -> None:
             try:
                 with self._lock:
@@ -69,13 +74,17 @@ class JobStore:
                 cfg = resolve_config(None, overrides, root)
                 cfg["output_path"] = out_path
 
-                count = int(cfg.get("count") or 1)
-                job.progress_total = count
+                count = max(1, int(cfg.get("count") or 1))
+                with self._lock:
+                    job.progress_total = count
+                    job.progress_done = 0
 
                 def on_progress(done: int, total: int, site_path: Path) -> None:
                     with self._lock:
                         job.progress_done = done
-                    self._append_log(job, f"[{done}/{total}] {site_path.name}")
+                        job.progress_total = total
+                    if done > 0:
+                        self._append_log(job, f"[{done}/{total}] {site_path.name}")
 
                 paths = run_generation(cfg, on_progress=on_progress)
                 job.result_paths = [str(p.resolve()) for p in paths]

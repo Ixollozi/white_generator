@@ -189,7 +189,8 @@ def test_blog_slug_professional_vertical_dedupes_and_skews_title() -> None:
     assert "beltline" not in s_prof.lower()
 
 
-def test_blog_slug_includes_site_identity_salt_when_provided() -> None:
+def test_blog_slug_ignores_site_identity_suffix_collision_handled_elsewhere() -> None:
+    """Hash tails on every slug were a generator fingerprint; uniqueness uses _unique_slug_in_set."""
     from generators.content_generator import _blog_post_slug_parts
 
     rng = random.Random(1)
@@ -213,4 +214,4 @@ def test_blog_slug_includes_site_identity_salt_when_provided() -> None:
         vertical_id="accounting",
         site_identity="identity-bbb",
     )
-    assert s1 != s2
+    assert s1 == s2

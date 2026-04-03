@@ -1,6 +1,7 @@
+.reference-site .gallery-heading-ref { margin-bottom: 0.6rem; }
 .reference-site .reference-nav {
-  background: #0f172a;
-  color: #e2e8f0;
+  background: var(--color-footer-bg, #0f172a);
+  color: var(--color-footer-fg, #e2e8f0);
   padding: 0.75rem 0;
 }
 .reference-site .nav-row {
@@ -9,7 +10,7 @@
   align-items: center;
   flex-wrap: wrap;
 }
-.reference-site .reference-nav a { color: #93c5fd; }
+.reference-site .reference-nav a { color: var(--color-footer-link, #93c5fd); }
 .reference-site .nav-brand { font-weight: 700; margin-right: 1rem; }
 .logo { display: inline-flex; align-items: center; }
 .logo img { height: 36px; width: auto; display: block; }
@@ -18,7 +19,8 @@ body.site-sticky-header.reference-site .site-main > .container.nav-row {
   position: sticky;
   top: 0;
   z-index: 40;
-  background: rgba(255, 255, 255, 0.96);
-  backdrop-filter: blur(8px);
-  border-bottom: 1px solid #e5e7eb;
+  background: var(--color-header-bg, rgba(255, 255, 255, 0.96));
+  backdrop-filter: var(--header-backdrop-filter, blur(8px));
+  -webkit-backdrop-filter: var(--header-backdrop-filter, blur(8px));
+  border-bottom: 1px solid var(--color-border, #e5e7eb);
 }

@@ -97,19 +97,19 @@ export default function App() {
   const [theme, setTheme] = useState("default");
   const [siteName, setSiteName] = useState("");
   const [verticalId, setVerticalId] = useState("");
-  const [strict, setStrict] = useState(false);
-  const [zipEach, setZipEach] = useState(false);
+  const [strict, setStrict] = useState(true);
+  const [zipEach, setZipEach] = useState(true);
   const [writeBuildManifest, setWriteBuildManifest] = useState(false);
   const [seoSitemap, setSeoSitemap] = useState(true);
   const [seoRobots, setSeoRobots] = useState(true);
-  const [seoKeywords, setSeoKeywords] = useState(false);
+  const [seoKeywords, setSeoKeywords] = useState(true);
   const [domainMode, setDomainMode] = useState<"none" | "brand_tld" | "random_tld" | "custom">("none");
   const [customDomain, setCustomDomain] = useState("");
   const [noiseCss, setNoiseCss] = useState(3);
   const [noiseJs, setNoiseJs] = useState(3);
-  const [noiseAttachAssets, setNoiseAttachAssets] = useState(false);
-  const [noiseRandomizeClasses, setNoiseRandomizeClasses] = useState(false);
-  const [noiseRandomizeIds, setNoiseRandomizeIds] = useState(false);
+  const [noiseAttachAssets, setNoiseAttachAssets] = useState(true);
+  const [noiseRandomizeClasses, setNoiseRandomizeClasses] = useState(true);
+  const [noiseRandomizeIds, setNoiseRandomizeIds] = useState(true);
   const [junk, setJunk] = useState<Set<string>>(new Set(JUNK_OPTIONS));
   const [imagesMode, setImagesMode] = useState<"none" | "web" | "upload">("none");
   const [imagesCount, setImagesCount] = useState(3);
@@ -439,10 +439,16 @@ export default function App() {
     }
   };
 
-  const progressPct =
-    job && job.progress_total > 0
-      ? Math.min(100, Math.round((job.progress_done / job.progress_total) * 100))
-      : 0;
+  const progressPct = useMemo(() => {
+    if (!job || job.progress_total <= 0) return 0;
+    if (job.status === "done") return 100;
+    return Math.min(100, Math.round((job.progress_done / job.progress_total) * 100));
+  }, [job]);
+
+  const progressIndeterminate =
+    job &&
+    job.progress_total > 0 &&
+    (job.status === "queued" || (job.status === "running" && job.progress_done === 0));
 
   const recentSiteNames = useMemo(() => {
     if (!job || job.status !== "done") return [];
@@ -1214,11 +1220,23 @@ export default function App() {
               </p>
               {job.progress_total > 0 && (
                 <>
-                  <div className="progress">
-                    <div style={{ width: `${progressPct}%` }} />
+                  <div
+                    className={`progress${progressIndeterminate ? " progress--indeterminate" : ""}`}
+                    role="progressbar"
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={progressIndeterminate ? undefined : progressPct}
+                    aria-label="Прогресс генерации"
+                    aria-busy={job.status === "queued" || job.status === "running"}
+                  >
+                    <div style={{ width: progressIndeterminate ? undefined : `${progressPct}%` }} />
                   </div>
                   <p className="muted">
-                    {job.progress_done} / {job.progress_total}
+                    {progressIndeterminate
+                      ? job.status === "queued"
+                        ? "В очереди…"
+                        : `Сайт 1 из ${job.progress_total}…`
+                      : `${job.progress_done} / ${job.progress_total}`}
                   </p>
                 </>
               )}

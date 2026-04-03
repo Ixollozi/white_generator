@@ -48,4 +48,15 @@ class SiteContext:
             out["site_base_url"] = sb.strip().rstrip("/")
         else:
             out["site_base_url"] = ""
+        pk = self.meta.get("page_keys")
+        ext = out["page_extension"]
+        if isinstance(pk, list) and "blog" in pk:
+            out["insights_href"] = f"blog.{ext}"
+            out["insights_label"] = "Blog"
+        elif isinstance(pk, list) and "resources" in pk:
+            out["insights_href"] = f"resources.{ext}"
+            out["insights_label"] = "Resources"
+        else:
+            out["insights_href"] = ""
+            out["insights_label"] = "Blog"
         return out

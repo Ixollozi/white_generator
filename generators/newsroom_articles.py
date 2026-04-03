@@ -10,6 +10,18 @@ from xml.sax.saxutils import escape
 
 from core.content_dates import as_of_year, past_dates_spread
 from core.person_names import pick_full_name, site_key_from_brand
+from core.prose_vary import (
+    apply_blog_post_depth_pass,
+    apply_inject_to_random_html_paragraphs,
+    massage_first_html_paragraph,
+    news_local_anchor_sentence,
+    pick_register,
+    prose_chatty_strength,
+    prose_humanize_enabled,
+    prose_micro_imperfections_enabled,
+    vary_first_section_plain_shape,
+    wrap_paragraph_html,
+)
 
 # Reputable external sources (real URLs) for citations and "Sources" blocks.
 CURATED_SOURCES: list[dict[str, str]] = [
@@ -366,7 +378,8 @@ def build_news_authors(
     sk = site_key_from_brand(brand or {})
     authors: list[dict[str, Any]] = []
     for i, (_seed_name, title, bio) in enumerate(seeds[:take]):
-        name = pick_full_name(sk, f"newsdesk|{key}|{i}")
+        bct = str((brand or {}).get("country") or "").strip() or None
+        name = pick_full_name(sk, f"newsdesk|{key}|{i}", country=bct)
         slug = _slugify_ascii(name, max_len=36)
         aid = f"author-{i + 1}"
         authors.append(
@@ -1017,6 +1030,8 @@ def enrich_news_vertical_content(
         if article_kind not in NEWS_ARTICLE_KINDS:
             article_kind = NEWS_ARTICLE_KINDS[i % len(NEWS_ARTICLE_KINDS)]
 
+        post_register = pick_register(rng)
+
         short_band = rng.random() < 0.47
         if article_kind == "news":
             target_min, target_max = (500, 800) if short_band else (960, 1420)
@@ -1031,6 +1046,30 @@ def enrich_news_vertical_content(
         html_secs, wc = _wordish_html_paragraphs(
             sections_raw, rng, cat, target_min=target_min, target_max=target_max
         )
+        if prose_humanize_enabled(brand, merged):
+            ch = prose_chatty_strength(brand, merged)
+            mic = prose_micro_imperfections_enabled(brand, merged)
+            vary_first_section_plain_shape(html_secs, rng)
+            apply_inject_to_random_html_paragraphs(html_secs, brand, rng, max_touch=2)
+            massage_first_html_paragraph(
+                html_secs,
+                rng,
+                register=post_register,
+                micro=mic,
+                chatty_strength=ch,
+            )
+            apply_blog_post_depth_pass(
+                html_secs,
+                brand,
+                rng,
+                register=post_register,
+                micro=mic,
+                chatty_strength=ch,
+            )
+            if rng.random() < 0.34 and html_secs:
+                paras0 = html_secs[0].get("paragraphs_html")
+                if isinstance(paras0, list):
+                    paras0.insert(1, wrap_paragraph_html(news_local_anchor_sentence(city, brand, rng)))
         _cat_fillers: dict[str, list[str]] = {
             "Technology": [
                 f"Vendor disclosure timelines for incidents like {t[:40].lower()} remain inconsistent across jurisdictions.",

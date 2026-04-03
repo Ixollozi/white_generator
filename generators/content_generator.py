@@ -13,8 +13,26 @@ from xml.sax.saxutils import escape
 import yaml
 
 from core.content_dates import as_of_year, founded_year_int, past_dates_recent, past_dates_spread
+from core.prose_vary import (
+    apply_blog_post_depth_pass,
+    apply_conversational_leadin,
+    apply_inject_to_random_html_paragraphs,
+    apply_micro_imperfections,
+    dedupe_paragraph_openers,
+    inject_local_detail,
+    massage_first_html_paragraph,
+    pick_register,
+    prose_chatty_strength,
+    prose_humanize_enabled,
+    prose_micro_imperfections_enabled,
+    rewrite_if_stale_opener,
+    season_phrase,
+    vary_first_section_plain_shape,
+    vary_paragraph_shape,
+)
 from core.money_locale import localize_money_labels
 from core.person_names import pick_full_name, pick_signature_name, site_key_from_brand
+from core.price_schema import derive_price_range_and_enrich_offers
 from core.theme_pack import merge_content_overlay
 from generators.newsroom_articles import enrich_news_vertical_content
 
@@ -350,16 +368,16 @@ def _short_hash_token(key: str, *, n: int = 5) -> str:
 
 
 _TITLE_PREFIX_BY_POST_TYPE: dict[str, list[str]] = {
-    "case_study": ["Case snapshot: {t}", "Field notes: {t}", "What shifted: {t}"],
-    "comparison": ["Compared: {t}", "Three paths on {t}", "Options around {t}"],
-    "how_to": ["Walkthrough: {t}", "Sequence for {t}", "Breaking down {t}"],
-    "checklist": ["Checklist: {t}", "Before you start: {t}", "Readiness for {t}"],
-    "mistakes": ["Common missteps on {t}", "Where {t} breaks down", "Pitfalls in {t}"],
-    "tips": ["Practical tips: {t}", "Short notes on {t}", "Fine print on {t}"],
-    "interview": ["On the record: {t}", "Conversation: {t}", "Inside view: {t}"],
-    "company_news": ["Update: {t}", "Internal note: {t}", "This month: {t}"],
-    "industry_update": ["Signals on {t}", "Market note: {t}", "What we're watching: {t}"],
-    "guide": ["Reference: {t}", "Blueprint: {t}", "Foundations of {t}"],
+    "case_study": ["Case snapshot: {t}", "Field notes: {t}", "What shifted: {t}", "Lesson from: {t}", "On the ground: {t}"],
+    "comparison": ["Compared: {t}", "Three paths on {t}", "Options around {t}", "Side by side: {t}"],
+    "how_to": ["Walkthrough: {t}", "Sequence for {t}", "Breaking down {t}", "Start here: {t}", "On {t}, step one"],
+    "checklist": ["Checklist: {t}", "Before you start: {t}", "Readiness for {t}", "Quick prep: {t}"],
+    "mistakes": ["Common missteps on {t}", "Where {t} breaks down", "Pitfalls in {t}", "Watch for: {t}"],
+    "tips": ["Practical tips: {t}", "Short notes on {t}", "Fine print on {t}", "Tiny fixes: {t}"],
+    "interview": ["On the record: {t}", "Conversation: {t}", "Inside view: {t}", "Q&A on {t}"],
+    "company_news": ["Update: {t}", "Internal note: {t}", "This month: {t}", "Dispatch: {t}"],
+    "industry_update": ["Signals on {t}", "Market note: {t}", "Watching: {t}", "Why {t} matters now", "Quick read: {t}"],
+    "guide": ["Reference: {t}", "Blueprint: {t}", "Foundations of {t}", "Plain guide: {t}"],
 }
 
 
@@ -441,10 +459,6 @@ def _blog_post_slug_parts(
     anchor = anchor.replace("how-to", "steps").replace("how_to", "steps")
     anchor = re.sub(r"-{2,}", "-", anchor).strip("-") or "insight"
     anchor = _dedupe_adjacent_slug_parts(anchor)
-    sid = (site_identity or "").strip()
-    if sid:
-        tok = _short_hash_token(f"slug|{sid}", n=5)
-        anchor = _dedupe_adjacent_slug_parts(f"{anchor}-{tok}")
     return _trim_slug_at_word_boundary(anchor, 88 if prof else 78)
 
 
@@ -488,7 +502,7 @@ def _longform_blog_categories(vertical_id: str) -> list[str]:
         "accounting": ["Tax", "Bookkeeping", "Payroll", "GST/HST", "CRA", "Year-end", "Advisory"],
         "legal": ["Corporate", "Contracts", "Compliance", "Litigation", "Estates", "Employment"],
     }
-    return list(pools.get(vid) or ["Updates", "How we work", "Guides", "Field notes", "Behind the scenes"])
+    return list(pools.get(vid) or ["Updates", "Playbooks", "Guides", "Field notes", "Behind the scenes"])
 
 
 def build_blog_authors(
@@ -545,7 +559,8 @@ def build_blog_authors(
     take = rng.choice([2, 3])
     authors: list[dict[str, Any]] = []
     for i, (title, bio) in enumerate(seeds[:take]):
-        name = pick_full_name(sk, f"blog|author|{vertical_id}|{i}")
+        bct = str((brand or {}).get("country") or "").strip() or None
+        name = pick_full_name(sk, f"blog|author|{vertical_id}|{i}", country=bct)
         slug = name.lower().replace(" ", "-")
         aid = f"author-{i + 1}"
         authors.append(
@@ -623,7 +638,7 @@ def _longform_section_pack(
             f"Scheduling around {tlow}",
             f"Chemistry notes for {tlow}",
             f"Common gaps we find in {tlow}",
-            f"How we audit {tlow} results",
+            f"Auditing {tlow} results",
             f"Crew handoff notes for {tlow}",
             f"Equipment choices behind {tlow}",
             f"What supervisors check on {tlow}",
@@ -641,7 +656,7 @@ def _longform_section_pack(
             "Signage, access, and crew timing",
         ],
         "cafe_restaurant": [
-            f"How {tlow} works in practice",
+            f"{tlow} in practice",
             f"What guests should know about {tlow}",
             f"Prep changes tied to {tlow}",
             f"Timing and pacing for {tlow}",
@@ -652,7 +667,7 @@ def _longform_section_pack(
             f"How reservations affect {tlow}",
             f"Service flow when {tlow} is busy",
             f"Staff briefing notes on {tlow}",
-            f"How we test changes to {tlow}",
+            f"Testing changes to {tlow}",
             f"Dietary notes the kitchen tracks for {tlow}",
             f"Seasonal swaps affecting {tlow}",
             f"Waitlist management during {tlow}",
@@ -668,7 +683,7 @@ def _longform_section_pack(
             f"Care steps after {tlow}",
             f"What to check before ordering {tlow}",
             f"Color consistency across {tlow} batches",
-            f"How we test shrinkage on {tlow}",
+            f"Shrinkage testing on {tlow}",
             f"Layering options with {tlow}",
             f"Storage and hanger advice for {tlow}",
             f"Tailoring considerations for {tlow}",
@@ -679,13 +694,13 @@ def _longform_section_pack(
             f"How color ages on {tlow}",
             f"What changed in the latest {tlow} drop",
             f"Packaging standards for {tlow}",
-            f"How we photograph {tlow}",
+            f"Photographing {tlow}",
             f"Composition labels on {tlow}",
             f"Seasonal availability of {tlow}",
             f"Wear testing results for {tlow}",
         ],
         "fitness": [
-            f"How we coach {tlow}",
+            f"Coaching {tlow} on the floor",
             f"Programming notes for {tlow}",
             f"Common mistakes in {tlow}",
             f"Recovery after {tlow}",
@@ -708,13 +723,13 @@ def _longform_section_pack(
         ],
         "marketing_agency": [
             f"Our approach to {tlow}",
-            f"What we measure for {tlow}",
+            f"Metrics that matter for {tlow}",
             f"Common pitfalls in {tlow}",
-            f"How we report on {tlow}",
+            f"Reporting cadence on {tlow}",
             f"Timeline expectations for {tlow}",
             f"Stakeholder roles in {tlow}",
             f"Quality gates for {tlow}",
-            f"How we scope {tlow} deliverables",
+            f"Scoping {tlow} deliverables",
             f"Testing and validation for {tlow}",
             f"Client access requirements for {tlow}",
             f"Risk factors in {tlow}",
@@ -745,7 +760,7 @@ def _longform_section_pack(
             f"When to escalate {matter_phrase} to a tax specialist",
             f"Closing entries that stabilize {matter_phrase}",
             f"Internal controls that support {matter_phrase}",
-            f"What we reconcile before discussing {matter_phrase}",
+            f"Reconciliations before discussing {matter_phrase}",
             f"Client prep that shortens review on {matter_phrase}",
         ],
         "legal": [
@@ -758,7 +773,7 @@ def _longform_section_pack(
             f"Confidentiality boundaries around {matter_phrase}",
             f"What clients misunderstand about {matter_phrase}",
             f"Checklists before filings related to {matter_phrase}",
-            f"How we communicate setbacks on {matter_phrase}",
+            f"Communicating setbacks on {matter_phrase}",
             f"Scope changes mid-matter on {matter_phrase}",
             f"Coordination with in-house teams on {matter_phrase}",
             f"Preservation and records for {matter_phrase}",
@@ -768,25 +783,25 @@ def _longform_section_pack(
         ],
     }
     _heading_default = [
-        "What the first two weeks usually involve",
-        "Before handoff: the checks we actually run",
-        "Where engagements usually drift (and how we catch it)",
-        "How we write decisions so they survive turnover",
-        "Quality gates that catch issues before clients do",
-        "Stakeholder alignment without endless meetings",
-        "Risk registers we review weekly",
-        "Capacity planning when the calendar is already full",
-        "Definition of ready vs. definition of done",
+        "The first two weeks — what actually happens",
+        "Before handoff: checks we run",
+        "Where engagements drift — and the early warning",
+        "Writing decisions so they survive turnover",
+        "Quality gates before clients see it",
+        "Alignment without calendar soup",
+        "Risk registers — weekly, not decorative",
+        "Capacity when the calendar is already full",
+        "Definition of ready vs. done",
         "Post-mortems that change the playbook",
-        "When to standardize and when to improvise",
-        "The boring workflow that keeps delivery predictable",
-        "Signals that it is time to rescope",
-        "How we keep one accountable owner per thread",
-        f"How {tlow} fits the wider plan",
+        "Standardize vs. improvise — quick call",
+        "Boring workflow, predictable delivery",
+        "Signals it is time to rescope",
+        "One accountable owner per thread",
+        f"{tlow} in the wider plan",
         f"Common misunderstandings about {tlow}",
-        f"What we measure after {tlow} ships",
-        f"When to revisit assumptions behind {tlow}",
-        f"Dependencies that block {tlow} most often",
+        f"After {tlow} ships — what we watch",
+        f"Revisiting assumptions behind {tlow}",
+        f"Dependencies that usually block {tlow}",
     ]
 
     heads = list(_heading_pools.get(pack_vid, _heading_default))
@@ -1602,7 +1617,7 @@ def enrich_longform_blog_for_non_news(merged: dict[str, Any], brand: dict[str, A
             "Fit notes: how we photograph drape vs. structure",
             "Returns made simple: what to do first",
             "Shipping cutoffs: when labels really scan",
-            "How we check quality before a drop ships",
+            "Quality checks before a drop ships",
             "What changed from last season (and why)",
             "Bundles vs. single pieces: how to choose",
             "How to measure a garment you already love",
@@ -1615,14 +1630,14 @@ def enrich_longform_blog_for_non_news(merged: dict[str, Any], brand: dict[str, A
     elif vid == "cafe_restaurant":
         title_seeds = [
             "What’s on the menu this month",
-            "How we plan around seasonal ingredients",
+            "Seasonal ingredients: planning without drama",
             "Reservations, walk-ins, and the bar",
             "How long a table is yours",
             "Kitchen prep that keeps service smooth",
-            "How we handle dietary notes and allergens",
+            "Dietary notes and allergens — kitchen workflow",
             "Wine and non-alc pairings that work",
             "Behind the pass on a busy night",
-            "How we design a tasting menu",
+            "Designing a tasting menu — pacing and arc",
             "What changes between lunch and dinner service",
             "Private events: what to expect before you book",
             "Our approach to tipping and service charges",
@@ -1633,7 +1648,7 @@ def enrich_longform_blog_for_non_news(merged: dict[str, Any], brand: dict[str, A
             "Trial visits: what to expect on day one",
             "Strength days vs conditioning days",
             "Deload weeks and why they matter",
-            "How we cap classes to keep coaching quality",
+            "Class caps — coaching quality vs. packed room",
             "Open gym etiquette during peak hours",
             "How to pick a membership that fits your week",
             "Warm-up blocks coaches actually use",
@@ -1642,58 +1657,62 @@ def enrich_longform_blog_for_non_news(merged: dict[str, Any], brand: dict[str, A
         ]
     elif vid == "cleaning":
         title_seeds = [
-            "How we plan routes around your hours",
-            "What counts as a high-touch surface",
-            "Move-in and move-out checklists",
-            "Photo logs and spot audits explained",
-            "Green products: when we standardize vs customize",
-            "How we document chemistry choices for your building",
-            "What to do before a deep clean visit",
-            "How often to schedule floor care",
-            "Microfiber color coding and cross-contamination",
-            "SDS binders: what auditors expect to see",
-            "Burnishing cycles and traffic-based scheduling",
-            "Wet floor signage and liability basics",
-            "Night routes: finishing before your building opens",
-            "How we handle holiday and blackout schedules",
-            "Restroom standards that pass surprise inspections",
-            "Carpet care: extraction frequency and spotting",
-            "Stone and epoxy floors: different chemistry rules",
-            "Scope creep: how we keep route plans honest",
-            "Tenant communication during disruptive cleans",
-            "Elevator and stairwell detailing schedules",
-            "Window and glass partition maintenance",
-            "Odor control without masking agents",
-            "Post-construction cleanup expectations",
-            "How we onboard a new building in the first week",
+            "Routes around your hours — the real constraints",
+            "High-touch surfaces: what counts",
+            "Move-in / move-out: checklist that matches leases",
+            "Photo logs when a spot audit lands",
+            "Green chemistry: standardize vs. custom",
+            "Documenting chemistry per surface type",
+            "Before deep clean: what speeds the first hour",
+            "Floor care cadence vs. foot traffic",
+            "Color-coded microfiber — why it matters",
+            "SDS binders: where auditors look first",
+            "Burnishing: traffic-based, not calendar fantasy",
+            "Wet-floor signs — timing that holds up in court",
+            "Night routes that clear before unlock",
+            "Holiday blackouts without surprise no-shows",
+            "Restrooms that survive pop-up inspections",
+            "Carpet extraction: frequency and spotting",
+            "Stone vs. epoxy: different rules, same crew",
+            "Keeping route scope from quietly growing",
+            "Tenant comms when work gets loud",
+            "Elevator and stairwell rotation that sticks",
+            "Glass cycles without streak drama",
+            "Odor control without perfume cover",
+            "Post-construction: dust that comes back if you rush",
+            "First week in a new building — what we standardize",
+            "Tuesday morning surprise walkthrough — playbook",
+            "Why one lobby always runs long",
         ]
     elif vid == "marketing_agency":
         title_seeds = [
-            "What we look for in week one of an audit",
+            "Week one of an audit: what we ask for first",
             "Pre-launch checks for schema and CWV",
-            "How we decide what to measure this quarter",
-            "Discovery calls that actually lead somewhere",
-            "How we document decisions so they survive turnover",
-            "Roadmaps vs backlogs: what lives where",
-            "How to keep content and dev in sync",
-            "Reporting that your finance team will actually read",
-            "Technical SEO fixes ranked by impact",
-            "When to pause a campaign and reassess",
-            "Backlink audits: separating earned from spam",
-            "Landing page tests that changed our minds",
-            "How we set realistic project timelines",
-            "Keyword research beyond volume and difficulty",
-            "Client onboarding: what we need from your side",
-            "Quarterly reviews: what we actually discuss",
-            "How we handle scope changes mid-engagement",
-            "Analytics setup that survives team turnover",
-            "Content refresh cadence and what triggers it",
-            "Page speed improvements that moved the needle",
-            "Schema markup: what we implement and why",
-            "How we prioritize fixes when everything is urgent",
-            "Conversion rate experiments worth running first",
-            "Staging and QA workflow before any deploy",
-            "Attribution models we recommend and avoid",
+            "Picking metrics for the quarter — sanity filters",
+            "Discovery calls that end with a next step",
+            "Decision logs that survive Slack churn",
+            "Roadmaps vs backlogs: where truth lives",
+            "Keeping content and dev on the same ticket",
+            "Reports your finance lead won’t glaze over",
+            "Technical SEO fixes: impact order, not ego order",
+            "When pausing a campaign is the right move",
+            "Earned links vs. directory noise",
+            "Landing tests that flipped our assumptions",
+            "Timelines that don’t assume perfect clients",
+            "Keyword research past volume and difficulty",
+            "Onboarding: access we need before week two",
+            "Quarterly reviews — agenda we actually stick to",
+            "Scope changes mid-flight: the one-page rule",
+            "Analytics that survives team turnover",
+            "Content refresh: triggers, not vibes",
+            "CWV wins we could prove in Search Console",
+            "Schema: what we ship and what we skip",
+            "Everything’s on fire — still need a stack rank",
+            "CRO experiments worth running before redesign",
+            "Staging and QA before green deploys",
+            "Attribution models we like — and avoid",
+            "Quick read: three signals your crawl budget is fine",
+            "Case note: when staging tags saved a launch",
         ]
     elif vid == "accounting":
         title_seeds = [
@@ -1718,7 +1737,7 @@ def enrich_longform_blog_for_non_news(merged: dict[str, Any], brand: dict[str, A
             "CRA correspondence: how we respond without panic",
             "Record retention: what to keep seven years vs. longer",
             "First consultation: documents that speed intake",
-            "How we close a month: reconciliations and review notes",
+            "Month-end close: reconciliations and review notes",
         ]
     elif vid == "legal":
         title_seeds = [
@@ -1836,60 +1855,65 @@ def enrich_longform_blog_for_non_news(merged: dict[str, Any], brand: dict[str, A
         ]
     elif vid in _TRADES_VERTICALS:
         title_seeds = [
-            "What we check on a first diagnostic visit",
-            "How we explain estimates without jargon",
-            "Emergency calls: what happens between ring and arrival",
-            "Permits and inspections: who handles what",
-            "How we protect floors and finishes on-site",
-            "Warranty work: what’s covered and what isn’t",
-            "Seasonal maintenance most homeowners skip",
-            "How we document before-and-after condition",
-            "Tooling and parts: why we stock what we stock",
-            "How we schedule multi-day jobs",
-            "Subcontractors: when we bring them in",
-            "Safety briefings our crews run every morning",
-            "How we handle change orders fairly",
-            "What to prep before we arrive",
-            "How we test systems before we leave",
-            "Follow-up visits: when they’re included",
-            "How we train apprentices in the field",
-            "Energy efficiency trade-offs we explain upfront",
-            "Older homes: common surprises we plan for",
-            "How we close out a job with paperwork you can file",
+            "First diagnostic: what we actually look at",
+            "Estimates without jargon — what to ask",
+            "Emergency calls: the gap between ring and truck",
+            "Permits and inspections: who owns what",
+            "Floors, booties, and drop cloths — on-site habits",
+            "Warranty work: covered vs. not (plain English)",
+            "Seasonal maintenance most people postpone",
+            "Photos before we touch anything",
+            "Why the truck stocks oddball parts",
+            "Multi-day jobs: how the calendar really works",
+            "Subcontractors: when we call for backup",
+            "Morning safety huddle — what gets said",
+            "Change orders without bad blood",
+            "Prep checklist before we park",
+            "Sign-off tests we won’t skip",
+            "Follow-up visits: included or not?",
+            "Training apprentices without slowing the job",
+            "Efficiency upgrades: trade-offs worth naming",
+            "Older homes: surprises we bake into the quote",
+            "Closeout paperwork you can file as-is",
+            "Why Friday afternoons get weird on the dispatch board",
+            "Three calls, same issue — what that usually means",
+            "Field note: when the second stop eats the first",
         ]
     else:
         title_seeds = [
-            "What we wish clients knew before kickoff",
-            "A simple checklist that prevents rework",
-            "How to measure progress without vanity metrics",
-            "The trade-off nobody mentions in planning meetings",
-            "A template for handling scope changes",
-            "What to do when stakeholders disagree",
-            "Why your timeline slips (and what fixes it)",
-            "How we document decisions so they survive turnover",
-            "What ‘quality’ actually means in practice",
-            "A realistic approach to constraints and capacity",
-            "How to review work without slowing shipping",
-            "The small operational habits that compound",
-            "When to standardize vs. customize",
-            "How we pick tools (and when we don’t)",
-            "A quarter’s worth of lessons in one page",
-            "What to audit before the next cycle",
-            "How to keep projects coherent across teams",
-            "What we changed after the last incident",
-            "Our default workflow (and why it’s boring on purpose)",
-            "How we handle edge cases without chaos",
-            "Signals that it’s time to revisit the plan",
-            "A field note from the week it got messy",
-            "The ‘why’ behind our checklist",
-            "What we’d do differently if we started today",
+            "Before kickoff: the five emails we wish arrived earlier",
+            "Checklist that actually prevents rework",
+            "Measuring progress without vanity charts",
+            "The trade-off nobody says out loud in planning",
+            "Scope changes — one template, fewer fights",
+            "When stakeholders disagree: who decides first",
+            "Timeline slips: usual suspects",
+            "Decision logs that outlive Slack threads",
+            "Quality in practice — not the poster version",
+            "Constraints, capacity, and saying no politely",
+            "Reviews that don’t stall shipping",
+            "Small ops habits that compound quietly",
+            "Standardize vs. customize — quick test",
+            "Tools we adopt — and ones we ignore on purpose",
+            "Quarter in review — compressed",
+            "Audit this before the next cycle",
+            "Keeping multi-team projects one thread",
+            "After the last incident: what we changed",
+            "Boring workflow on purpose",
+            "Edge cases without fire drills",
+            "When to reopen the plan",
+            "Field note: the week the board went sideways",
+            "Why that checklist exists",
+            "If we started today — one thing we’d do sooner",
+            "Quick read: three signs you’re over-meeting",
+            "Same problem, three teams — how we untangle it",
         ]
     ident_blog = str(brand.get("generation_identity") or merged.get("generation_identity") or brand_name).strip()
     blog_seed = int(hashlib.sha256(f"blog|{ident_blog}|{vid}".encode("utf-8")).hexdigest(), 16) % (2**32)
     blog_rng = random.Random(blog_seed)
     blog_rng.shuffle(title_seeds)
 
-    def _build_dek(rr: random.Random, *, title: str, category: str) -> str:
+    def _build_dek(rr: random.Random, *, title: str, category: str, register: str = "neutral") -> str:
         geo = f"{city}" if city else (country or "your area")
         t = title.strip()
         cat = category.strip()
@@ -1942,7 +1966,16 @@ def enrich_longform_blog_for_non_news(merged: dict[str, Any], brand: dict[str, A
         }
         pool = pools.get(vid) or pools["generic"]
         dek = rr.choice(pool).strip()
-        # Keep length SEO-friendly
+        if register == "conversational" and rr.random() < 0.44:
+            dek = rr.choice(
+                [
+                    f"{t} — candid notes from {brand_name} in {geo}.",
+                    f"About {t}: what we actually run in {geo}, without the deck.",
+                    f"{t}? Same questions every month — here’s our standing answer for {geo}.",
+                ],
+            ).strip()
+        elif register == "formal" and rr.random() < 0.36:
+            dek = (dek + f" Prepared for stakeholders reviewing work in {geo}.").strip()
         return dek[:300].rstrip()
 
     def _fill_to_target_words(
@@ -2047,6 +2080,7 @@ def enrich_longform_blog_for_non_news(merged: dict[str, Any], brand: dict[str, A
                 f"Cross-border {tl} issues need local counsel memos on conflicts and enforcement — assume nothing about reciprocity.",
             ],
         }
+        _loc_hint = (city or "").strip() or "our market"
         filler_pool = list(_filler_banks.get(fb_vid, [
             f"Scope documents for {tl} that define done in measurable terms prevent the most common handoff disputes.",
             f"Weekly standups on {tl} surface blockers effectively when they avoid becoming status-reading rituals.",
@@ -2058,6 +2092,11 @@ def enrich_longform_blog_for_non_news(merged: dict[str, Any], brand: dict[str, A
             f"Risk registers for {tl} reviewed weekly catch dependencies before they become deadline surprises.",
             f"Capacity planning for {tl} that accounts for interrupts produces more honest timelines.",
             f"Definition of ready for {tl} matters as much as definition of done; unclear inputs yield unclear outputs.",
+            f"Same {tl} question hit three inboxes in {_loc_hint} last week — this page is the shortcut.",
+            f"Usually {tl} discussions run long when nobody brings the baseline doc; start there.",
+            f"Sometimes {tl} is a fifteen-minute fix; sometimes it waits on legal — both happen.",
+            f"Rain-day delays aside, {tl} rarely needs a hero; it needs a named owner and a date.",
+            f"Quick math: two days of clarify-up-front on {tl} beats two weeks of rework most quarters.",
         ]))
         r.shuffle(filler_pool)
         used: set[str] = set()
@@ -2115,7 +2154,7 @@ def enrich_longform_blog_for_non_news(merged: dict[str, Any], brand: dict[str, A
                     title = candidate
                     break
         tpls = _TITLE_PREFIX_BY_POST_TYPE.get(post_type)
-        if tpls and rng.random() < 0.52:
+        if tpls and rng.random() < 0.38:
             title = rng.choice(tpls).replace("{t}", title)
         seen_titles.add(title.lower())
         category = rng.choice(cats) if cats else "Updates"
@@ -2153,6 +2192,10 @@ def enrich_longform_blog_for_non_news(merged: dict[str, Any], brand: dict[str, A
             "published": True,
         }
 
+        post_register = pick_register(rng)
+        chatty = prose_chatty_strength(brand, merged)
+        micro_prose = prose_micro_imperfections_enabled(brand, merged)
+
         chosen: dict[str, Any] | None = None
         for attempt in range(attempts_per_post):
             # Regenerate body sections with a per-attempt deterministic RNG to vary headings/order.
@@ -2185,8 +2228,26 @@ def enrich_longform_blog_for_non_news(merged: dict[str, Any], brand: dict[str, A
             sections = _fill_to_target_words(
                 sections, rr, target_words=word_target, allow_filler=not spotlight
             )
+            if prose_humanize_enabled(brand, merged):
+                vary_first_section_plain_shape(sections, rr)
+                apply_inject_to_random_html_paragraphs(sections, brand, rr)
+                massage_first_html_paragraph(
+                    sections,
+                    rr,
+                    register=post_register,
+                    micro=micro_prose,
+                    chatty_strength=chatty,
+                )
+                apply_blog_post_depth_pass(
+                    sections,
+                    brand,
+                    rr,
+                    register=post_register,
+                    micro=micro_prose,
+                    chatty_strength=chatty,
+                )
             post = dict(base_post)
-            dek = _build_dek(rr, title=title, category=category)
+            dek = _build_dek(rr, title=title, category=category, register=post_register)
             post["dek"] = dek
             post["excerpt"] = dek[:280] + ("…" if len(dek) > 280 else "")
             post["article_sections_html"] = sections
@@ -2555,15 +2616,15 @@ def _default_testimonials(
         ]
     else:
         quotes = [
-            (f"{name} made priorities legible and delivery predictable for our team.", "R. Chen", "Operations lead"),
-            (f"We needed a partner who understands {activity} end to end.", "S. Ali", "Director"),
-            ("Clear communication, pragmatic scope, and steady execution.", "J. Miller", "Founder"),
-            ("Weekly check-ins stayed short and decision-oriented.", "T. Okoro", "Product lead"),
-            ("They documented handoff so our internal team didn’t stall.", "W. Berg", "CTO"),
+            (f"{name} showed up when they said they would and finished without re-quoting mid-job.", "R. Chen", "Property manager"),
+            (f"We needed a steady crew for {activity} — estimates matched the final invoice.", "S. Ali", "Small-business owner"),
+            ("They explained options in plain language before starting any billable work.", "J. Miller", "Homeowner"),
+            ("Scheduling was flexible around our hours; the crew respected the building rules.", "T. Okoro", "Office coordinator"),
+            (f"Photos and notes from each visit made it easy to justify renewals on {activity}.", "W. Berg", "Facilities lead"),
         ]
     out: list[dict[str, Any]] = []
     for i, (q, _nm, role) in enumerate(quotes):
-        nm = pick_signature_name(sk, f"testimonial|{vid}|{i}")
+        nm = pick_signature_name(sk, f"testimonial|{vid}|{i}", country=str(brand.get("country") or "").strip() or None)
         out.append({"quote": q, "name": nm, "role": role, "rating": star})
     return out
 
@@ -2637,14 +2698,78 @@ def _default_faq(name: str, city: str, vertical_id: str, rng: random.Random) -> 
         ]
     else:
         items = [
-            {"q": "How do we start a project?", "a": f"Use the contact form — we reply within one business day with next steps{loc}."},
-            {"q": "What does a typical engagement include?", "a": "Discovery, a written plan, milestones, and documentation at handoff."},
-            {"q": "Can you sign an NDA?", "a": "Yes — mutual NDA before sharing sensitive details."},
-            {"q": "Where are you based?", "a": f"We operate from {c}; full address and hours are on the contact page."},
-            {"q": "Emergency support?", "a": "After-hours numbers are listed for contracted clients; otherwise email is monitored daily."},
-            {"q": "Payment terms?", "a": "Milestones and net terms are spelled out in the proposal before work starts."},
-            {"q": "Change requests?", "a": "Scope changes get a short written addendum so dates and budgets stay honest."},
-            {"q": "References?", "a": "We provide relevant references once we’re aligned on scope and timeline."},
+            {
+                "q": "How do we start a project?",
+                "a": rng.choice(
+                    [
+                        f"Use the contact form — we reply within one business day with next steps{loc}.",
+                        f"Contact page first; most threads get a same-day acknowledgment and a clear next step{loc}.",
+                    ],
+                ),
+            },
+            {
+                "q": "What does a typical engagement include?",
+                "a": rng.choice(
+                    [
+                        "Discovery, a written plan, milestones, and documentation at handoff.",
+                        "A short discovery pass, written milestones, and a handoff pack — not a slide deck pretending to be delivery.",
+                    ],
+                ),
+            },
+            {
+                "q": "Can you sign an NDA?",
+                "a": rng.choice(
+                    [
+                        "Yes — mutual NDA before sharing sensitive details.",
+                        "Yes — standard mutual NDA before confidential files or access.",
+                    ],
+                ),
+            },
+            {
+                "q": "Where are you based?",
+                "a": rng.choice(
+                    [
+                        f"We operate from {c}; full address and hours are on the contact page.",
+                        f"{c} is home base; address, map, and hours live on the contact page.",
+                    ],
+                ),
+            },
+            {
+                "q": "Emergency support?",
+                "a": rng.choice(
+                    [
+                        "After-hours numbers are listed for contracted clients; otherwise email is monitored daily.",
+                        "Contracted clients see after-hours lines on their statement of work; everyone else gets next-business-day follow-up.",
+                    ],
+                ),
+            },
+            {
+                "q": "Payment terms?",
+                "a": rng.choice(
+                    [
+                        "Milestones and net terms are spelled out in the proposal before work starts.",
+                        "Net terms and milestone billing are written before signatures — no verbal ‘we’ll figure it out’.",
+                    ],
+                ),
+            },
+            {
+                "q": "Change requests?",
+                "a": rng.choice(
+                    [
+                        "Scope changes get a short written addendum so dates and budgets stay honest.",
+                        "Anything outside scope gets a one-page addendum before more hours hit the invoice.",
+                    ],
+                ),
+            },
+            {
+                "q": "References?",
+                "a": rng.choice(
+                    [
+                        "We provide relevant references once we’re aligned on scope and timeline.",
+                        "Comparable references ship after a serious scope conversation — not as cold-call filler.",
+                    ],
+                ),
+            },
         ]
     rng.shuffle(items)
     take = rng.choice([3, 5, 8])
@@ -2669,7 +2794,10 @@ def _trades_team_roster(brand: dict[str, Any], rng: random.Random, field_role: s
             for i in range(4)
         ]
     return [
-        {"name": pick_full_name(sk, f"trades|{country or 'intl'}|{i}"), "role": roles[i]}
+        {
+            "name": pick_full_name(sk, f"trades|{country or 'intl'}|{i}", country=country or None),
+            "role": roles[i],
+        }
         for i in range(4)
     ]
 
@@ -2686,9 +2814,10 @@ def _ensure_team_items(
     merged.setdefault("team_heading", "Meet the team")
     vid = vertical_id.strip()
     sk = site_key_from_brand(brand)
+    team_ctry = str(brand.get("country") or "").strip() or None
 
     def _person(slot: str, role: str, bio: str = "") -> dict[str, Any]:
-        row: dict[str, Any] = {"name": pick_full_name(sk, f"{vid}|{slot}"), "role": role}
+        row: dict[str, Any] = {"name": pick_full_name(sk, f"{vid}|{slot}", country=team_ctry), "role": role}
         if bio:
             row["bio"] = bio
         return row
@@ -2889,12 +3018,18 @@ def _enrich_testimonial_items(merged: dict[str, Any], brand: dict[str, Any], rng
                 )
         if not (it.get("city") or "").strip():
             it["city"] = rng.choice(zone_list)
-        stars_n = 5 if rng.random() < 0.55 else 4
+        try:
+            avg_target = float(str(brand.get("review_avg") or "4.5"))
+        except ValueError:
+            avg_target = 4.5
+        stars_n = min(5, max(1, int(round(avg_target))))
         it["rating_score"] = stars_n
         it["rating"] = "★" * stars_n + ("☆" if stars_n < 5 else "")
         it["style"] = rng.choice(styles)
         it["has_photo"] = rng.random() < 0.42
         it.setdefault("photo_src", "")
+        plat = ["Google review", "Google Maps", "Facebook"]
+        it["source_label"] = rng.choice(plat) if rng.random() < 0.88 else ""
 
 
 def _enrich_hero_footer_trust(merged: dict[str, Any], brand: dict[str, Any], rng: random.Random) -> None:
@@ -3714,34 +3849,169 @@ def _enrich_extended_site_content(merged: dict[str, Any], brand: dict[str, Any],
     zones = brand.get("service_area_zones")
     zone_list = [str(z) for z in zones] if isinstance(zones, list) else []
     merged["content_tone"] = rng.choice(["professional", "friendly", "authoritative", "local"])
+    vid_x = str(merged.get("vertical_id") or "").strip()
+    trades_like = vid_x in _TRADES_VERTICALS or vid_x in ("dental", "medical", "cleaning")
     merged.setdefault("usp_heading", "Why teams choose us")
-    merged["usp_items"] = [
-        {
-            "title": "Responsive scheduling",
-            "text": f"We plan around real access and blackout windows in {city or 'your area'}.",
-        },
-        {
-            "title": "Clear ownership",
-            "text": "Every scope has a named lead and written handoff so nothing drops between teams.",
-        },
-        {
-            "title": "Proof, not promises",
-            "text": "Checklists, photos on request, and paperwork your auditors can file.",
-        },
-        {
-            "title": "Local crew",
-            "text": f"The same people answer the phone and show up — based in {city or 'the community'}.",
-        },
-    ]
+    if trades_like:
+        merged["usp_heading"] = rng.choice(
+            ["Why homeowners call us", "What neighbors notice", "Local crews, accountable work"],
+        )
+        loc = city or "your area"
+        merged["usp_items"] = [
+            {
+                "title": "Real arrival windows",
+                "text": rng.choice(
+                    [
+                        f"We confirm timing for {loc} and update you if the route shifts.",
+                        f"Dispatch confirms windows for {loc} and sends a quick text when traffic or prior jobs move the clock.",
+                    ],
+                ),
+            },
+            {
+                "title": "Written scope",
+                "text": rng.choice(
+                    [
+                        "Labor, parts, and exclusions are listed before tools come off the truck.",
+                        "You see labor, materials, and what we are not covering before we start billing time.",
+                    ],
+                ),
+            },
+            {
+                "title": "Licensed & insured",
+                "text": rng.choice(
+                    [
+                        "Credentials go to your property contact before the first visit.",
+                        "COI and license details hit your inbox before the crew parks.",
+                    ],
+                ),
+            },
+            {
+                "title": "Same faces",
+                "text": rng.choice(
+                    [
+                        f"You get a steady crew familiar with your building — not a rotating unknown bench.",
+                        f"Repeat work in {loc} means the same lead when possible — fewer re-briefs, fewer surprises.",
+                    ],
+                ),
+            },
+        ]
+    else:
+        if vid_x in ("marketing_agency", "consulting"):
+            own_line = rng.choice(
+                [
+                    "Every scope has a named lead and written handoff so nothing drops between teams.",
+                    "One named lead and a written handoff beat a committee inbox when deadlines tighten.",
+                ],
+            )
+        else:
+            own_line = rng.choice(
+                [
+                    "Every scope has a named lead and a written plan so field and office stay aligned.",
+                    "Field and office share one written plan with a named owner — no silent drift between teams.",
+                ],
+            )
+        loc2 = city or "your area"
+        merged["usp_items"] = [
+            {
+                "title": "Responsive scheduling",
+                "text": rng.choice(
+                    [
+                        f"We plan around real access and blackout windows in {loc2}.",
+                        f"Blackout windows and access rules in {loc2} land on the schedule before we promise dates.",
+                    ],
+                ),
+            },
+            {
+                "title": "Clear ownership",
+                "text": own_line,
+            },
+            {
+                "title": "Proof, not promises",
+                "text": rng.choice(
+                    [
+                        "Checklists, photos on request, and paperwork your auditors can file.",
+                        "When auditors ask, the checklist and photos are already in the folder — not reconstructed later.",
+                    ],
+                ),
+            },
+            {
+                "title": "Local crew",
+                "text": rng.choice(
+                    [
+                        f"The same people answer the phone and show up — based in {city or 'the community'}.",
+                        f"Phones and trucks map to the same small team based in {city or 'the community'}.",
+                    ],
+                ),
+            },
+        ]
     rng.shuffle(merged["usp_items"])
     merged["usp_items"] = merged["usp_items"][: rng.randint(3, min(6, len(merged["usp_items"])))]
     merged["process_preview_heading"] = "How a typical engagement runs"
-    _proc_steps = [
-        {"title": "Discovery", "text": "We align on goals, constraints, and timing before locking calendars."},
-        {"title": "Plan", "text": "You get a written scope with milestones and a single owner on our side."},
-        {"title": "Deliver", "text": "We execute with checkpoints you can verify, not vague status emails."},
-        {"title": "Review", "text": "We capture lessons and tune the next cycle so quality holds."},
-    ]
+    retail_like = vid_x in ("cafe_restaurant", "clothing", "fitness")
+    if trades_like:
+        _proc_steps = [
+            {
+                "title": "Site walkthrough",
+                "text": "We confirm access, safety, and realistic windows before calendars harden.",
+            },
+            {
+                "title": "Written scope",
+                "text": "Labor, parts, and exclusions are listed before tools come off the truck.",
+            },
+            {
+                "title": "Build & verify",
+                "text": "Checkpoints you can witness — readings and photos when they matter to sign-off.",
+            },
+            {
+                "title": "Closeout pack",
+                "text": "Warranties and paperwork land in one place, not across scattered threads.",
+            },
+        ]
+    elif vid_x in ("marketing_agency", "consulting", "legal", "accounting"):
+        _proc_steps = [
+            {
+                "title": "Intake",
+                "text": "Goals, constraints, and stakeholders are named before dates are promised.",
+            },
+            {
+                "title": "Blueprint",
+                "text": "Milestones, owners, and review gates arrive in writing — not as implied side notes.",
+            },
+            {
+                "title": "Delivery",
+                "text": "We ship against checkpoints you can verify instead of vague status pings.",
+            },
+            {
+                "title": "Review",
+                "text": "Lessons feed the next cycle so quality bars do not drift quietly.",
+            },
+        ]
+    elif retail_like:
+        _proc_steps = [
+            {
+                "title": "Listen",
+                "text": "We align on timing, capacity, and what good looks like before doors open or carts load.",
+            },
+            {
+                "title": "Plan the week",
+                "text": "Prep, staffing, and contingencies are spelled out while things are still calm.",
+            },
+            {
+                "title": "Run & adjust",
+                "text": "We adapt in the moment without improvising safety, policy, or guest promises.",
+            },
+            {
+                "title": "Short debrief",
+                "text": "One-page notes on what to repeat — and what to fix before the next rush.",
+            },
+        ]
+    else:
+        _proc_steps = [
+            {"title": "Discovery", "text": "We align on goals, constraints, and timing before locking calendars."},
+            {"title": "Plan", "text": "You get a written scope with milestones and a single owner on our side."},
+            {"title": "Deliver", "text": "We execute with checkpoints you can verify, not vague status emails."},
+            {"title": "Review", "text": "We capture lessons and tune the next cycle so quality holds."},
+        ]
     n_steps = rng.randint(3, min(5, len(_proc_steps)))
     start = rng.randint(0, len(_proc_steps) - n_steps)
     merged["process_preview_steps"] = _proc_steps[start : start + n_steps]
@@ -3774,7 +4044,14 @@ def _enrich_extended_site_content(merged: dict[str, Any], brand: dict[str, Any],
                 "title": rng.choice(
                     ["Interior refresh", "Seasonal program", "Full build-out", "Rapid turnaround", "Multi-site"],
                 ),
-                "summary": "Delivered on schedule with weekly check-ins and clear documentation.",
+                "summary": rng.choice(
+                    [
+                        "Delivered on schedule with weekly check-ins and clear documentation.",
+                        "Weekly photos and written sign-offs kept stakeholders aligned without extra meetings.",
+                        "Scope held steady; changes stayed rare and always written.",
+                        "Milestones matched the plan auditors saw — not a retrofitted timeline.",
+                    ],
+                ),
                 "image_src": f"img/portfolio/p-{idx + 1:02d}.jpg",
             },
         )
@@ -3822,6 +4099,46 @@ def _enrich_extended_site_content(merged: dict[str, Any], brand: dict[str, Any],
                 "Seasonal readiness under audit pressure",
             ],
         )
+        cs_summary = rng.choice(
+            [
+                (
+                    f"A {activity} engagement in {district} for a {client_type_lbl.lower()} client — "
+                    f"{duration_lbl.lower()}, documented handoffs, and measurable outcomes."
+                ),
+                (
+                    f"Three similar requests stacked around {district} one busy season; {name} sequenced crews "
+                    f"so nobody lost their access window — {duration_lbl.lower()} end to end."
+                ),
+                (
+                    f"{client_type_lbl} operations in {district} needed {activity} without pausing the floor — "
+                    f"{duration_lbl.lower()}, with paperwork the facilities lead could file as-is."
+                ),
+            ],
+        )
+        chal = rng.choice(
+            [
+                (
+                    f"The {client_type_lbl.lower()} client needed reliable {activity} coverage in {district} "
+                    "without shutting down daily operations or breaking compliance trails."
+                ),
+                (
+                    f"Traffic patterns and loading rules in {district} made same-day heroics unrealistic; "
+                    f"the {client_type_lbl.lower()} client still needed predictable {activity} coverage."
+                ),
+            ],
+        )
+        sol = rng.choice(
+            [
+                (
+                    f"{name} staged work in windows that matched their traffic patterns, "
+                    "assigned a single operations lead, and logged verification steps the facilities team could audit."
+                ),
+                (
+                    f"{name} matched shifts to quiet hours in {district}, named one operations lead, "
+                    "and photographed checkpoints the client could drop into their own QA binder."
+                ),
+            ],
+        )
         merged["case_studies"].append(
             {
                 "slug": slug,
@@ -3830,19 +4147,10 @@ def _enrich_extended_site_content(merged: dict[str, Any], brand: dict[str, Any],
                 "client_type": client_type_lbl,
                 "duration": duration_lbl,
                 "title": f"{client}: {project_title.lower()}",
-                "summary": (
-                    f"A {activity} engagement in {district} for a {client_type_lbl.lower()} client — "
-                    f"{duration_lbl.lower()}, documented handoffs, and measurable outcomes."
-                ),
+                "summary": cs_summary,
                 "client_label": client,
-                "challenge": (
-                    f"The {client_type_lbl.lower()} client needed reliable {activity} coverage in {district} "
-                    "without shutting down daily operations or breaking compliance trails."
-                ),
-                "solution": (
-                    f"{name} staged work in windows that matched their traffic patterns, "
-                    "assigned a single operations lead, and logged verification steps the facilities team could audit."
-                ),
+                "challenge": chal,
+                "solution": sol,
                 "results_html": (
                     "<ul><li>Cut repeat scheduling conflicts by roughly 40% in the first quarter.</li>"
                     "<li>Passed internal QA checks with zero major findings on the last two walkthroughs.</li>"
@@ -3979,37 +4287,128 @@ def _enrich_extended_site_content(merged: dict[str, Any], brand: dict[str, Any],
             name, int(fy_raw), cy, rng, vertical_id=str(merged.get("vertical_id") or "")
         )
     svc_items = merged.get("service_items")
+    vid_svc = str(merged.get("vertical_id") or "").strip()
+    trades_svc = vid_svc in _TRADES_VERTICALS or vid_svc in ("dental", "medical", "cleaning", "fitness")
+    agency_svc = vid_svc in ("marketing_agency", "consulting")
     if isinstance(svc_items, list):
         for si, it in enumerate(svc_items):
             if not isinstance(it, dict):
                 continue
             if not (it.get("ideal_for") or "").strip():
-                it["ideal_for"] = rng.choice(
-                    [
-                        "Teams that need predictable scheduling and one accountable lead.",
-                        "Operators who care about documentation and audit-ready checklists.",
-                        "Owners juggling multiple locations and tight communication loops.",
-                    ],
-                )
+                if trades_svc:
+                    it["ideal_for"] = rng.choice(
+                        [
+                            "Property owners who want the problem fixed once, not revisited every season.",
+                            "Facilities teams that need paperwork and access rules respected on site.",
+                            "Anyone who wants pricing explained before work starts, not after the invoice.",
+                        ],
+                    )
+                elif agency_svc:
+                    it["ideal_for"] = rng.choice(
+                        [
+                            "Teams that need predictable scheduling and one accountable lead.",
+                            "Operators who care about documentation and audit-ready checklists.",
+                            "Owners juggling multiple locations and tight communication loops.",
+                        ],
+                    )
+                else:
+                    it["ideal_for"] = rng.choice(
+                        [
+                            "Organizations that want clear dates and one accountable point of contact.",
+                            "Leaders who need documentation they can share with finance or compliance.",
+                            "Busy sites that cannot afford vague scopes or surprise add-ons.",
+                        ],
+                    )
             if not (it.get("pricing_hint") or "").strip():
-                it["pricing_hint"] = rng.choice(
-                    ["Call for a tailored quote", "Starts from a short discovery block", "Scoped after walkthrough"],
-                )
+                if trades_svc:
+                    it["pricing_hint"] = rng.choice(
+                        [
+                            "Call for a written estimate",
+                            "Typical visit scoped on site before billing",
+                            "Flat dispatch fee plus labor — quoted upfront",
+                        ],
+                    )
+                elif agency_svc:
+                    it["pricing_hint"] = rng.choice(
+                        ["Call for a tailored quote", "Starts from a short discovery block", "Scoped after walkthrough"],
+                    )
+                else:
+                    it["pricing_hint"] = rng.choice(
+                        [
+                            "Call for a tailored quote",
+                            "Scoped after a short consultation",
+                            "Written estimate before work begins",
+                        ],
+                    )
             steps = it.get("process_steps")
             if not isinstance(steps, list) or not steps:
                 it["process_steps"] = _service_process_steps_for_item(it, activity, city, si)
             if not it.get("service_faq"):
                 tit = str(it.get("title") or "service").lower()
-                it["service_faq"] = [
-                    {
-                        "q": f"How long does a typical {tit} visit take?",
-                        "a": "Most first visits are scoped after a short walkthrough; duration depends on access and size.",
-                    },
-                    {
-                        "q": "Do you provide estimates in writing?",
-                        "a": "Yes — you’ll get scope, assumptions, and exclusions before work begins.",
-                    },
+                loc_svc = f" in {city}" if city else ""
+                faq_sets = [
+                    [
+                        {
+                            "q": f"How long does a typical {tit} visit take?",
+                            "a": rng.choice(
+                                [
+                                    "Most first visits are scoped after a short walkthrough; duration depends on access and size.",
+                                    "We quote time after a quick walkthrough — access, parking, and building rules move the clock more than square footage.",
+                                ],
+                            ),
+                        },
+                        {
+                            "q": "Do you provide estimates in writing?",
+                            "a": rng.choice(
+                                [
+                                    "Yes — you’ll get scope, assumptions, and exclusions before work begins.",
+                                    "Written scope lands before billing time: what’s included, what isn’t, and what could change it.",
+                                ],
+                            ),
+                        },
+                    ],
+                    [
+                        {
+                            "q": f"What should we prep before a {tit} appointment?",
+                            "a": rng.choice(
+                                [
+                                    "Clear access paths, a single point of contact on site, and any prior reports you want us to factor in.",
+                                    "Have someone available to unlock common areas and confirm where we can stage tools — it saves the first hour.",
+                                ],
+                            ),
+                        },
+                        {
+                            "q": f"Do you serve {city or 'our area'} regularly for {tit}?",
+                            "a": rng.choice(
+                                [
+                                    f"Yes — routes and crews run through {city or 'the area'} weekly; dispatch confirms windows{loc_svc}.",
+                                    f"We schedule {city or 'local'} work in batches where it helps; you’ll see realistic windows, not fantasy ETAs.",
+                                ],
+                            ),
+                        },
+                    ],
+                    [
+                        {
+                            "q": f"Can {tit} be scheduled after hours?",
+                            "a": rng.choice(
+                                [
+                                    "Often yes — building rules and escort requirements decide what’s realistic.",
+                                    "After-hours is common when access is easier; we confirm badging and escorts before we book.",
+                                ],
+                            ),
+                        },
+                        {
+                            "q": "How do change orders work?",
+                            "a": rng.choice(
+                                [
+                                    "Anything outside the written scope gets a short addendum before more labor or materials.",
+                                    "We pause, write the delta, and only continue once both sides sign off — no surprise line items.",
+                                ],
+                            ),
+                        },
+                    ],
                 ]
+                it["service_faq"] = rng.choice(faq_sets)
     _enrich_testimonial_items(merged, brand, rng)
     _enrich_hero_footer_trust(merged, brand, rng)
 
@@ -4089,6 +4488,13 @@ def fill_content(
     svc_items = merged.get("service_items")
     if isinstance(svc_items, list):
         _inject_service_pricing(svc_items, vid_key, rng, brand)
+        dr, _ = derive_price_range_and_enrich_offers(
+            svc_items,
+            country=str(brand.get("country") or ""),
+            vertical_id=vid_key,
+        )
+        if dr:
+            merged["price_range"] = dr
     _ensure_component_defaults(merged, name, activity, vid_key, brand, rng)
     _ensure_team_items(merged, name, vid_key, brand, rng)
     _append_about_paragraphs(merged, vid_key, rng, brand)
@@ -4152,6 +4558,16 @@ def fill_content(
         merged["products"] = products
     _enrich_extended_site_content(merged, brand, rng)
     _dedupe_faq_duplicate_answers(merged, rng)
+    _expand_blog_post_bodies(
+        merged,
+        name,
+        str(brand.get("city") or ""),
+        str(brand.get("country") or ""),
+        activity,
+        rng,
+        vid_key,
+        brand=brand,
+    )
     return merged
 
 
@@ -4180,6 +4596,136 @@ def _dedupe_faq_duplicate_answers(merged: dict[str, Any], rng: random.Random) ->
             seen.add(key)
 
 
+def build_service_area_page_html(
+    zone: str,
+    *,
+    brand_name: str,
+    activity: str,
+    founded_year: int | str,
+    page_ext: str,
+    service_items: list[Any],
+    vertical_id: str,
+    rng: random.Random,
+    city: str = "",
+    brand: dict[str, Any] | None = None,
+) -> str:
+    """Several structural templates so service-area pages are not thin duplicates."""
+    z = (zone or "").strip()
+    act = (activity or "services").strip()
+    vid = (vertical_id or "").strip()
+    fy = str(founded_year or "").strip() or "2015"
+    z_e, bn_e, act_e, fy_e = escape(z), escape(brand_name), escape(act), escape(fy)
+    head_line = escape(act.strip().title())
+    ext = escape(page_ext)
+
+    svc_list_html = ""
+    if isinstance(service_items, list) and service_items:
+        items_html = "".join(
+            f"<li><strong>{escape(str(s.get('title', '')))}</strong>: {escape(str(s.get('text', '')))}</li>"
+            for s in service_items
+            if isinstance(s, dict)
+        )
+        svc_list_html = f"<ul>{items_html}</ul>"
+
+    if vid in ("dental", "medical"):
+        lead = (
+            f"<p>{bn_e} sees patients from {z_e} and nearby neighborhoods, with scheduling that respects "
+            f"workday constraints and follow-up clarity after each visit.</p>"
+        )
+    elif vid in _TRADES_VERTICALS:
+        lead = (
+            f"<p>Crews covering {z_e} know local access rules, parking limits, and how to stage work without "
+            f"surprising residents or building managers — we’ve run {act_e} jobs here since {fy_e}.</p>"
+        )
+    elif vid in ("legal", "accounting"):
+        lead = (
+            f"<p>Clients in {z_e} get the same document discipline as downtown matters: clear scopes, "
+            f"written timelines, and no surprise line items after engagement letters are signed.</p>"
+        )
+    else:
+        lead = (
+            f"<p>{bn_e} provides professional {act_e} throughout {z_e} and surrounding areas. "
+            f"Our team has been active here since {fy_e}, with scheduling that fits how your organization actually runs.</p>"
+        )
+
+    b_sa = brand if isinstance(brand, dict) else {}
+    lead_block = lead
+    if vid in _TRADES_VERTICALS and rng.random() < 0.68:
+        lead_block += (
+            f"<p>{season_phrase(b_sa, rng).capitalize()} still reshuffles routing around {z_e}; "
+            f"dispatch texts if the second stop slides, not after you’ve already waited.</p>"
+        )
+    if rng.random() < 0.52:
+        lead_block += (
+            f"<p>Narrow streets and curb rules near {z_e} eat setup time — arrival windows account for that.</p>"
+        )
+    city_t = (city or "").strip()
+    if city_t and rng.random() < 0.38:
+        c_e = escape(city_t)
+        lead_block += (
+            f"<p>We still coordinate {act_e} from {c_e} into {z_e} regularly — same contact tree, "
+            f"just different parking math.</p>"
+        )
+
+    mid_tail_a = rng.choice(
+        [
+            "<p>Written estimates before we mobilize; arrival windows confirmed by dispatch; photos or checklists on request.</p>",
+            "<p>Estimates hit your inbox before mobilization; dispatch confirms windows; photo checklists stay optional but common.</p>",
+        ],
+    )
+    mid_tail_b = rng.choice(
+        [
+            (
+                f"<p>We confirm building rules, after-hours access, and contact trees before the first visit — "
+                f"especially for multi-tenant addresses in {z_e}.</p>"
+            ),
+            (
+                f"<p>Multi-tenant addresses in {z_e} mean we lock escorts, badges, and after-hours rules before day one — "
+                f"no improvised lobby negotiations.</p>"
+            ),
+        ],
+    )
+    mid_a = (
+        f"<h2>Services we deliver in {z_e}</h2>{svc_list_html}"
+        f"<h2>How we work on-site in {z_e}</h2>"
+        f"{mid_tail_a}"
+    )
+    mid_b = (
+        f"<h2>Typical requests in {z_e}</h2>{svc_list_html}"
+        f"<h2>Scheduling and access</h2>"
+        f"{mid_tail_b}"
+    )
+    mid_c = (
+        f"<h2>Quick facts for {z_e} clients</h2>"
+        f"<ul>"
+        f"<li>Supervisor-named on your file for repeat work</li>"
+        f"<li>Change orders only after written approval</li>"
+        f"<li>Emergency line monitored when advertised on our contact page</li>"
+        f"</ul>"
+        f"<h2>Core offerings</h2>{svc_list_html}"
+    )
+    cta = f"<p><a href='contact.{ext}' class='btn'>Get a quote for {z_e}</a></p>"
+
+    why_local = rng.choice(
+        [
+            "<p>Local familiarity means fewer reschedules, realistic arrival windows, and crews who treat neighborhood reputation as part of the job.</p>",
+            "<p>Fewer surprise reschedules, windows that match curb reality, and crews who assume neighbors talk to each other.</p>",
+        ],
+    )
+    layouts = [
+        f"<section class='block'><div class='container narrow'><h1>{head_line} in {z_e}</h1>{lead_block}{mid_a}{cta}</div></section>",
+        f"<section class='block'><div class='container narrow'><h1>{head_line} — {z_e}</h1>{lead_block}{mid_b}{cta}</div></section>",
+        f"<section class='block'><div class='container narrow'><h1>{bn_e} in {z_e}</h1>{lead_block}{mid_c}{cta}</div></section>",
+        f"<section class='block'><div class='container narrow'><h1>{head_line} serving {z_e}</h1>"
+        f"{mid_b}{lead_block}<h2>What we offer</h2>{svc_list_html}{cta}</div></section>",
+        f"<section class='block'><div class='container narrow'><h1>{z_e}: {head_line}</h1>{lead_block}"
+        f"<h2>Why {z_e} teams choose {bn_e}</h2>"
+        f"{why_local}"
+        f"<h2>Services</h2>{svc_list_html}{cta}</div></section>",
+    ]
+    return layouts[rng.randrange(len(layouts))]
+
+
 def _inject_service_pricing(
     service_items: list[Any],
     vertical_id: str,
@@ -4200,8 +4746,29 @@ def _inject_service_pricing(
         "clothing": ["Tees from $36", "Outerwear from $148", "Bundles from $112"],
         "news": ["Team briefings from $240/mo", "API access from $490/mo"],
         "marketing_agency": ["Technical audits from $2.6k", "Retainers from $5.2k/mo", "Sprints from $9.8k"],
+        "dental": ["Hygiene visit from $120", "Whitening from $450", "Crown consult from $195"],
+        "plumbing": ["Drain service from $125", "Water heater tune-up from $285", "After-hours visit from $195"],
+        "roofing": ["Inspection from $350", "Repairs from $650", "Replacement quotes from $8.5k"],
+        "landscaping": ["Weekly maintenance from $180", "Seasonal cleanup from $420", "Design consult from $275"],
+        "consulting": ["Strategy workshop from $3.8k", "Advisory day from $1.9k", "Quarterly program from $6.2k"],
+        "moving": ["Local move from $480", "Two-bedroom pack from $920", "Long-distance estimate from $2.4k"],
+        "hvac": ["Tune-up from $129", "Diagnostic from $95", "Duct cleaning from $420"],
+        "legal": ["Initial consult from $350", "Contract review from $780", "Filing package from $1.2k"],
+        "medical": ["New patient visit from $185", "Follow-up from $95", "Lab panel from $140"],
+        "electrical": ["Service call from $125", "Panel work from $850", "EV charger install from $1.8k"],
+        "auto_repair": ["Oil service from $72", "Brake job from $320", "Diagnostics from $125"],
+        "real_estate": ["Buyer consult complimentary", "Listing prep from $495", "Staging consult from $350"],
+        "accounting": ["Personal return from $220", "Bookkeeping from $285/mo", "Corporate year-end from $1.8k"],
+        "pest_control": ["Interior treatment from $165", "Perimeter plan from $95/mo", "Inspection from $125"],
     }
-    opts = list(pools.get(vid) or ["Project tiers from $3.2k", "Day blocks from $1.35k", "Retainers from $4.8k/mo"])
+    agency_fallback = ["Project tiers from $3.2k", "Day blocks from $1.35k", "Retainers from $4.8k/mo"]
+    neutral_local = ["Service visit from $125", "Standard scope from $285", "Priority booking from $195"]
+    if vid in pools:
+        opts = list(pools[vid])
+    elif vid == "generic":
+        opts = list(agency_fallback)
+    else:
+        opts = list(neutral_local)
     rng.shuffle(opts)
     for i, it in enumerate(service_items):
         if not isinstance(it, dict):
@@ -4244,10 +4811,80 @@ def _blog_vocab(vertical_id: str) -> dict[str, str]:
             "unit": "audits and releases",
             "focus": "measurable changes, not slide decks",
         },
+        "dental": {
+            "where": "the chair and sterilization path",
+            "unit": "appointments and treatment blocks",
+            "focus": "consent, imaging, and follow-up clarity",
+        },
+        "medical": {
+            "where": "exam rooms and intake",
+            "unit": "visits and referrals",
+            "focus": "documentation, continuity, and patient communication",
+        },
+        "plumbing": {
+            "where": "the service van and mechanical rooms",
+            "unit": "calls and callbacks",
+            "focus": "access, parts on hand, and written scope before work starts",
+        },
+        "roofing": {
+            "where": "the roofline and ground perimeter",
+            "unit": "inspections and crew days",
+            "focus": "weather windows, safety, and photo documentation",
+        },
+        "landscaping": {
+            "where": "beds, turf, and hardscape transitions",
+            "unit": "routes and seasonal passes",
+            "focus": "irrigation, plant health, and realistic maintenance windows",
+        },
+        "consulting": {
+            "where": "workshops and leadership calendars",
+            "unit": "sprints and steering sessions",
+            "focus": "decisions, owners, and written next steps",
+        },
+        "moving": {
+            "where": "loading docks and residence access",
+            "unit": "truck days and packing crews",
+            "focus": "inventory labels, building rules, and damage protocols",
+        },
+        "hvac": {
+            "where": "mechanical rooms and occupied spaces",
+            "unit": "service calls and seasonal tune-ups",
+            "focus": "refrigerant handling, filtration, and comfort targets",
+        },
+        "legal": {
+            "where": "the file and the docket",
+            "unit": "drafts and filings",
+            "focus": "deadlines, evidence, and client instructions in writing",
+        },
+        "electrical": {
+            "where": "panels, conduit, and finished spaces",
+            "unit": "service calls and installs",
+            "focus": "permits, arc safety, and power budgets",
+        },
+        "auto_repair": {
+            "where": "the bay and the lift",
+            "unit": "ROs and inspections",
+            "focus": "parts lead times, warranty notes, and test drives",
+        },
+        "real_estate": {
+            "where": "showings and closing desks",
+            "unit": "listings and offers",
+            "focus": "disclosures, comparables, and timeline discipline",
+        },
+        "accounting": {
+            "where": "close calendars and client inboxes",
+            "unit": "files and filings",
+            "focus": "source documents, reconciliations, and CRA-ready packages",
+        },
+        "pest_control": {
+            "where": "perimeter and interior access points",
+            "unit": "treatments and follow-ups",
+            "focus": "product choice, pet safety, and written re-entry times",
+        },
         "generic": {
-            "where": "day-to-day delivery",
-            "unit": "milestones and handoffs",
-            "focus": "clarity, owners, and dates people can rely on",
+            "where": "day-to-day operations on site",
+            "unit": "visits and scheduled work",
+            "focus": "clear scope, one accountable lead, and realistic dates",
         },
     }
     return pools.get(vid) or pools["generic"]
@@ -4261,6 +4898,7 @@ def _expand_blog_post_bodies(
     activity: str,
     rng: random.Random,
     vertical_id: str,
+    brand: dict[str, Any] | None = None,
 ) -> None:
     posts = merged.get("blog_posts")
     if not isinstance(posts, list):
@@ -4270,6 +4908,7 @@ def _expand_blog_post_bodies(
     locale_hint = f"{loc}, {ctry}" if ctry else loc
     voc = _blog_vocab(vertical_id)
     n_styles = 8
+    b_payload = brand if isinstance(brand, dict) else {}
     for i, p in enumerate(posts):
         if not isinstance(p, dict) or p.get("body_paragraphs") or p.get("article_sections_html"):
             continue
@@ -4281,9 +4920,15 @@ def _expand_blog_post_bodies(
             f"a single page beats repeating it on every call."
         )
         style = (i * 3 + rng.randrange(0, n_styles)) % n_styles
+        first_alts: list[str]
         if style == 0:
-            paras = [
+            first_alts = [
                 f"We drafted this after another week of {voc['where']} in {loc}. The question behind “{tlow}” keeps showing up, so here’s how {brand_name} actually handles it — not the brochure version.",
+                f"Another week of {voc['where']} in {loc}, and “{tlow}” is still the phrase people lead with — here’s the non-brochure version from {brand_name}.",
+                f"If you’re comparing notes on {tlow} in {loc}, this is the workflow we actually run — not a slide-deck fantasy.",
+            ]
+            paras = [
+                rng.choice(first_alts),
                 f"{ex_block} In practice that means {voc['focus']}; anything cute on paper that the team can’t repeat gets cut.",
                 f"If you’re comparing vendors for {activity}, skim for specifics: who owns what, what “done” looks like, and how disagreements get resolved. Fancy adjectives cost nothing.",
                 "When we change a procedure, we’ll say so here. No silent rewrites.",
@@ -4294,56 +4939,110 @@ def _expand_blog_post_bodies(
                 if excerpt.strip()
                 else f"This note is for anyone planning work with {brand_name} in the next quarter."
             )
-            paras = [
+            first_alts = [
                 f"Short answer: {tlow} shows up constantly for our audience in {loc}, so we published this instead of repeating the same talking points on every call. Long answer follows.",
+                f"{tlow} keeps landing in our inbox from {loc}; we’d rather publish once than repeat the same call script.",
+                f"Quick version: {tlow} is a recurring thread for neighbors in {loc} — the long version is below.",
+            ]
+            paras = [
+                rng.choice(first_alts),
                 second,
                 f"Our {voc['unit']} depend on steady habits — {voc['focus']}. That’s the lens for everything below.",
                 f"None of this replaces a written scope for {activity}; it’s background so you’re not guessing.",
             ]
         elif style == 2:
-            paras = [
+            first_alts = [
                 f"Field note from {brand_name}: people read “{tlow}” and picture different outcomes. Here’s the version we stand behind in {loc}.",
+                f"Same headline, three different mental pictures — here’s what {tlow} means on our crew in {loc}.",
+                f"On the ground in {loc}, {tlow} is less abstract than it reads online; this is our working definition.",
+            ]
+            paras = [
+                rng.choice(first_alts),
                 f"{ex_block} We’d rather be a little plain-spoken than promise a workflow we don’t run weekly.",
                 f"Side by side with the rest of what we publish on {activity}, this should read like one thread — not a one-off sales patch.",
                 "Typos fixed quietly; policy or pricing shifts get called out.",
             ]
         elif style == 3:
-            paras = [
+            first_alts = [
                 f"Internally we file this under {tlow}. Externally it’s just honest detail for neighbors in {loc} who like to read before they call.",
+                f"Neighborhood readers in {loc} asked for plain detail on {tlow}; this is the file we’d send a friend.",
+                f"Call it {tlow} or call it housekeeping — either way, here’s what we tell people in {loc} before they book.",
+            ]
+            paras = [
+                rng.choice(first_alts),
                 ex_block,
                 f"The through-line is {voc['focus']}. If that bores you, we’re probably a good fit — we optimize for repeatability, not hype.",
                 f"Seasonal volume and carrier cutoffs around {locale_hint} can move dates; the contact page stays the source for hours and blackouts.",
             ]
         elif style == 4:
-            paras = [
+            first_alts = [
                 f"Why bother writing about {tlow}? Because {brand_name} gets the same three emails every month, and a public answer saves everyone time.",
+                f"We’re not philosophizing about {tlow} — we’re answering the emails that repeat every month.",
+                f"This post exists because {tlow} generates the same three questions; a page is cheaper than a voicemail loop.",
+            ]
+            paras = [
+                rng.choice(first_alts),
                 ex_block,
                 f"Behind the scenes in {loc}, {voc['where']} is where theory meets {voc['unit']}. That’s what we’re describing.",
                 f"Competing quotes for {activity}? Ask how they document {voc['focus']} — not just what they promise in the subject line.",
             ]
         elif style == 5:
-            paras = [
+            first_alts = [
                 f"A few paragraphs on {tlow} won’t replace a conversation, but it should remove the obvious unknowns for people near {loc}.",
+                f"You don’t need a manifesto on {tlow} — you need the unknowns removed if you’re near {loc}.",
+                f"Think of this as a pre-call brief on {tlow} for anyone around {loc}.",
+            ]
+            paras = [
+                rng.choice(first_alts),
                 f"{ex_block} We keep {voc['unit']} tight so surprises are rare and fixable.",
                 f"Everything here aligns with how we talk about {activity} on services and FAQ — if you spot a clash, the newer dated note wins.",
                 "Thanks for reading; the team sees patterns in these posts and adjusts training when the same confusion pops up twice.",
             ]
         elif style == 6:
-            paras = [
+            first_alts = [
                 f"Not everyone needs a deep dive on {tlow}. If you’re skimming: we care about {voc['focus']}, and we’re based in {loc}.",
+                f"Skimming? {tlow} boils down to {voc['focus']} for us — and we’re in {loc} when you want the longer version.",
+                f"If {tlow} isn’t your whole week, start here: {voc['focus']}, {loc}, {brand_name}.",
+            ]
+            paras = [
+                rng.choice(first_alts),
                 ex_block,
                 f"For {activity}, we’ve learned that {voc['where']} exposes gaps faster than any strategy workshop. This article is mostly lessons from that.",
                 f"Reach out through the site if your situation is unusual — templates help most people, not every edge case.",
             ]
         else:
-            paras = [
+            first_alts = [
                 f"This month’s note on {tlow} — written for clients and regulars around {loc}, not for a generic checklist.",
+                f"Regulars around {loc} asked for a dated note on {tlow}; this is it — not a generic checklist.",
+                f"Seasonal update on {tlow} for people who already know {brand_name} in {loc}.",
+            ]
+            paras = [
+                rng.choice(first_alts),
                 ex_block
                 if excerpt.strip()
                 else f"{brand_name} tries to publish concrete detail; fluff makes audits and handoffs harder.",
                 f"We tie {voc['unit']} back to {voc['focus']} so {activity} doesn’t drift into “we’ll figure it out later.”",
                 "Updated when reality changes; the date in the byline is the anchor.",
             ]
+        if prose_humanize_enabled(b_payload, merged):
+            register = pick_register(rng)
+            micro = prose_micro_imperfections_enabled(b_payload, merged)
+            paras[0] = rewrite_if_stale_opener(paras[0], first_alts, rng)
+            if rng.random() < 0.48:
+                short_ledes = [
+                    f"{tlow.title()} shows up weekly in {loc}.",
+                    f"Same question, new week: {tlow}.",
+                    f"Quick context on {tlow} for {loc}.",
+                ]
+                paras[0] = rng.choice(short_ledes)
+            elif register == "conversational" and rng.random() < 0.26:
+                paras[0] = apply_conversational_leadin(paras[0], rng)
+            if micro:
+                paras[0] = apply_micro_imperfections(paras[0], rng)
+            paras = dedupe_paragraph_openers(paras, rng)
+            inj = rng.randrange(len(paras))
+            paras[inj] = inject_local_detail(paras[inj], b_payload, rng)
+            paras = vary_paragraph_shape(paras, rng)
         if rng.random() < 0.45:
             paras[0], paras[1] = paras[1], paras[0]
         p["body_paragraphs"] = paras
@@ -4411,7 +5110,13 @@ def _prepend_local_story(merged: dict[str, Any], brand: dict[str, Any], name: st
         f"Our {city} base{reg} dates to {fy} — long enough to see what repeats every season and what doesn’t. ",
         f"What started in {fy} as a small {city} crew is now the same group answering the phone and the inbox. ",
     ]
-    lead = rng.choice(leads)
+    scene_leads = [
+        f"The phone still rings early on Mondays in {city} — same habit {name} built its roster around. ",
+        f"Walk past {name} on a Thursday in {city} and you’ll still see checklists, not improvisation, behind the counter. ",
+        f"In {city}, the first message of the day is rarely glamorous; {name} answers it anyway — that’s the job. ",
+        f"Seasons change in {city}; the through-line at {name} is the same crew learning what repeats and what doesn’t. ",
+    ]
+    lead = rng.choice(scene_leads if rng.random() < 0.44 else leads)
     if lead.rstrip() in body:
         return
     merged["about_body"] = lead + body
@@ -4498,6 +5203,82 @@ _ABOUT_EXTRA_POOLS: dict[str, list[str]] = {
     ],
 }
 
+_ABOUT_SHORT_SNIPPETS: dict[str, list[str]] = {
+    "cafe_restaurant": [
+        "Busy nights need the same leads every week.",
+        "Menus drift without disciplined supplier reviews.",
+        "Allergen notes live on tickets, not memory.",
+        "The pass stays quiet when prep is honest.",
+    ],
+    "cleaning": [
+        "Routes redraw when your hours change.",
+        "SDS binders belong beside supplies, not in a drawer.",
+        "Photos beat arguments on quality.",
+        "Holiday blackouts publish early.",
+    ],
+    "marketing_agency": [
+        "Changelog ties releases to outcomes.",
+        "Staging tags separate live from queued.",
+        "We decline channels we can’t run whole.",
+        "Reports speak CFO, not vanity.",
+    ],
+    "fitness": [
+        "Class caps protect coaching quality.",
+        "Trials include a real screen, not a sales ambush.",
+        "Equipment logs are boring until they prevent injury.",
+        "Coaches should not shout over the playlist.",
+    ],
+    "news": [
+        "Corrections live at the top with a time stamp.",
+        "Thin weekend desks beat sloppy speed.",
+        "Graphics ship with sources or not at all.",
+        "Syndication rules don’t bend per partner.",
+    ],
+    "clothing": [
+        "Fabric changes get named in copy.",
+        "Return windows stay visible, not buried.",
+        "Flat and on-body shots use the same rig.",
+        "Cutoffs post in local time.",
+    ],
+    "legal": [
+        "Conflict checks precede every file.",
+        "Retainers name exclusions plainly.",
+        "Risk notes are short, dated, filed.",
+        "Cross-border gets local counsel early.",
+    ],
+    "accounting": [
+        "GL mapping stays consistent month to month.",
+        "CRA threads stay one issue per chain.",
+        "GST positions get documented before filing.",
+        "Catch-up work gets scoped before dates are promised.",
+    ],
+    "consulting": [
+        "SOWs name review gates upfront.",
+        "Assumptions get written when data lags.",
+        "Declining half-resourced work is a feature.",
+        "Decision logs beat parallel email threads.",
+    ],
+}
+
+_GENERIC_ABOUT_SHORT: tuple[str, ...] = (
+    "One accountable lead owns the thread end to end.",
+    "Written handoffs survive turnover better than hallway deals.",
+    "Scope changes get a short addendum before more work ships.",
+    "We rehearse edge cases when the downside of a miss is high.",
+    "Checklists scale; heroics don’t.",
+    "Clients hear from a named owner when dates slip.",
+)
+
+
+def _about_short_snippet_pool(vertical_id: str, brand: dict[str, Any]) -> list[str]:
+    vid = (vertical_id or "").strip()
+    if vid in _ABOUT_SHORT_SNIPPETS:
+        return list(_ABOUT_SHORT_SNIPPETS[vid])
+    sk = site_key_from_brand(brand)
+    b = int(hashlib.sha256(f"about_s|{sk}|{vid}".encode("utf-8")).hexdigest(), 16) % len(_GENERIC_ABOUT_SHORT)
+    return [_GENERIC_ABOUT_SHORT[(b + j) % len(_GENERIC_ABOUT_SHORT)] for j in range(3)]
+
+
 _GENERIC_ABOUT_SPLITS: tuple[list[str], ...] = (
     [
         "Assumptions, owners, and dates are written down early so delivery doesn’t depend on hallway agreements.",
@@ -4535,13 +5316,23 @@ def _append_about_paragraphs(
     rng: random.Random,
     brand: dict[str, Any],
 ) -> None:
-    pool = _about_extra_paragraph_pool(vertical_id, brand)
+    long_pool = _about_extra_paragraph_pool(vertical_id, brand)
+    short_pool = _about_short_snippet_pool(vertical_id, brand)
     body = (merged.get("about_body") or "").strip()
-    if not body or not pool:
+    if not body or not long_pool:
         return
-    rng.shuffle(pool)
-    take = 2 if len(pool) >= 2 else len(pool)
-    for para in pool[:take]:
+    rng.shuffle(long_pool)
+    rng.shuffle(short_pool)
+    picks: list[str] = []
+    if short_pool and len(long_pool) >= 1:
+        s0, l0 = short_pool[0], long_pool[0]
+        if rng.random() < 0.5:
+            picks = [s0, l0]
+        else:
+            picks = [l0, s0]
+    else:
+        picks = long_pool[:2] if len(long_pool) >= 2 else long_pool[:1]
+    for para in picks:
         p = para.strip()
         if p and p not in body:
             body = f"{body} {p}"

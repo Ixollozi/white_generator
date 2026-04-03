@@ -186,15 +186,19 @@ def _organization_ld(base: str, ctx: dict[str, Any]) -> str:
         offers: list[dict[str, Any]] = []
         for it in svc_items[:12]:
             if isinstance(it, dict) and str(it.get("title") or "").strip():
-                offers.append(
-                    {
-                        "@type": "Offer",
-                        "itemOffered": {
-                            "@type": "Service",
-                            "name": str(it["title"]).strip(),
-                        },
-                    }
-                )
+                off: dict[str, Any] = {
+                    "@type": "Offer",
+                    "itemOffered": {
+                        "@type": "Service",
+                        "name": str(it["title"]).strip(),
+                    },
+                }
+                sp = str(it.get("schema_price") or "").strip()
+                sc = str(it.get("schema_price_currency") or "").strip()
+                if sp and sc:
+                    off["price"] = sp
+                    off["priceCurrency"] = sc
+                offers.append(off)
         if offers:
             payload["hasOfferCatalog"] = {
                 "@type": "OfferCatalog",

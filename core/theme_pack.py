@@ -10,6 +10,11 @@ from core.content_dates import as_of_year, founded_year_int
 
 from core.person_names import pick_signature_name, site_key_from_brand
 
+# Theme content.yaml must not replace niche core from data/verticals.yaml.
+_OVERLAY_PROTECTED_KEYS: frozenset[str] = frozenset(
+    {"seo_blurb", "service_items", "activity_summary", "vertical_id", "industry", "service"},
+)
+
 _DEFAULT_NAV: list[dict[str, str]] = [
     {"href": "index.php", "label": "Home"},
     {"href": "about.php", "label": "About"},
@@ -140,6 +145,8 @@ def merge_content_overlay(
 
     merged = dict(base)
     for k, v in overlay.items():
+        if k in _OVERLAY_PROTECTED_KEYS:
+            continue
         merged[k] = fmt_obj(v)
 
     # Theme packs ship static testimonial attributions; re-key per site so exports don't share the same names.
@@ -152,7 +159,8 @@ def merge_content_overlay(
             for i, row in enumerate(items):
                 if isinstance(row, dict):
                     r = dict(row)
-                    r["name"] = pick_signature_name(sk, f"theme-pack|{vid}|{i}")
+                    ctry = str(brand.get("country") or "").strip() or None
+                    r["name"] = pick_signature_name(sk, f"theme-pack|{vid}|{i}", country=ctry)
                     q = str(r.get("quote") or "").strip()
                     if not q:
                         r["quote"] = (

@@ -16,6 +16,8 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "theme": "default",
     "seed": None,
     "strict_components": False,
+    # When True, ValueError if brand/domain vs vertical_id vs services look inconsistent.
+    "coherence_strict": False,
     "brand": {
         "domain_mode": "none",  # none|brand_tld|random_tld
         "tlds": ["com", "net", "org"],

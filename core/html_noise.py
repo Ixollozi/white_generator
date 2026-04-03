@@ -40,7 +40,8 @@ _ID_LEX: tuple[str, ...] = (
 )
 
 
-def _class_prefix_from_token(chunk: str, mode: str, rng: random.Random) -> str:
+def compute_class_prefix(chunk: str, mode: str, rng: random.Random) -> str:
+    """Deterministic decorative class prefix (same inputs as used when randomize_classes is on)."""
     raw = hashlib.sha256(f"class|{chunk}|{mode}".encode()).hexdigest()
     i = int(raw[:12], 16)
     a = _CLASS_LEX[i % len(_CLASS_LEX)]
@@ -52,6 +53,25 @@ def _class_prefix_from_token(chunk: str, mode: str, rng: random.Random) -> str:
     if mode_n == "bem":
         return f"block-{a}__{b}"
     return f"{a}-{b}"
+
+
+def strip_decoy_class_prefix(html: str, prefix: str) -> str:
+    """Remove a known generator class prefix from every class attribute (e.g. stack-70)."""
+    p = (prefix or "").strip()
+    if not p:
+        return html
+    pref = re.escape(p) + r"\s+"
+
+    def _strip_class(m: re.Match[str]) -> str:
+        inner = (m.group(1) or "").strip()
+        rest = re.sub(rf"^{pref}", "", inner, count=1).strip()
+        if not rest:
+            return ""
+        return f'class="{rest}"'
+
+    out = re.sub(r'class="([^"]*)"', _strip_class, html)
+    out = re.sub(r'\s+class="\s*"', "", out)
+    return out
 
 
 def _id_prefix_from_token(chunk: str) -> str:
@@ -66,8 +86,11 @@ def apply_html_noise(html: str, rng: random.Random, noise_cfg: dict[str, Any], t
     """
     Optional class/id decoration for generated HTML.
     Prefixes href="#fragment" when id values are prefixed so in-page links stay valid.
+    When strip_class_prefix is true (default), removes the decorative class prefix after injection
+    so templates keep stable CSS hooks without leaking generator tokens in the export.
     """
     out = html
+    class_tok = ""
     if bool(noise_cfg.get("randomize_classes")):
         chunk = (token or "").strip().lower()
         if not chunk:
@@ -75,13 +98,13 @@ def apply_html_noise(html: str, rng: random.Random, noise_cfg: dict[str, Any], t
         mode = str(noise_cfg.get("class_prefix_mode") or "").strip().lower()
         if not mode:
             mode = rng.choice(["std", "short", "bem"])
-        c_tok = _class_prefix_from_token(chunk, mode, rng)
+        class_tok = compute_class_prefix(chunk, mode, rng)
 
         def _cls(m: re.Match[str]) -> str:
             inner = (m.group(1) or "").strip()
             if not inner:
                 return m.group(0)
-            return f'class="{c_tok} {inner}"'
+            return f'class="{class_tok} {inner}"'
 
         out = re.sub(r'class="([^"]*)"', _cls, out)
 
@@ -113,5 +136,8 @@ def apply_html_noise(html: str, rng: random.Random, noise_cfg: dict[str, Any], t
             return f'href="#{id_prefix}-{frag}"'
 
         out = re.sub(r'href="#([^"]*)"', _href_hash, out)
+
+    if class_tok and bool(noise_cfg.get("strip_class_prefix", True)):
+        out = strip_decoy_class_prefix(out, class_tok)
 
     return out
