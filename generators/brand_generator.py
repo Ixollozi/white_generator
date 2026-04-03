@@ -9,12 +9,15 @@ from typing import Any
 from urllib.parse import quote_plus
 
 from core.address_catalog import (
-    pick_address_for_site,
-    pick_districts_for_site,
-    pick_geo_for_city,
-    pick_surname,
     DISTRICTS,
     SURNAMES,
+    pick_address_for_site,
+    pick_districts_for_site,
+    pick_geo_for_site,
+    pick_surname,
+    refine_dublin_address_for_brand,
+    refine_gta_address_for_brand,
+    TORONTO_METRO_DISTRICTS,
 )
 from core.geo_profile import merge_geo_into_brand
 from core.money_locale import localize_money_labels
@@ -326,6 +329,9 @@ def _generate_brand_name(
         if districts:
             district = rng.choice(districts)
             suf = rng.choice(niche_pool)
+            if vertical_id == "cleaning" and str(suf).strip() == "Cleaning":
+                alt = [x for x in niche_pool if str(x).strip() != "Cleaning"]
+                suf = rng.choice(alt) if alt else "Services"
             return f"{district} {suf}"
         return f"{surname} {rng.choice(niche_pool)}"
 
@@ -523,6 +529,24 @@ _PROMO_MEDICAL: tuple[str, ...] = (
     "Flu clinic hours posted weekly; walk-ins limited when vaccine supply is tight.",
     "Referrals: please bring imaging discs or portal links to avoid duplicate tests.",
 )
+_PROMO_CLEANING: tuple[str, ...] = (
+    "January deep-clean slots in {city} are booking about two weeks out — ask for a walkthrough date.",
+    "New buildings in {city}: we start with a written scope and trial week before locking the route.",
+    "Green-chemistry options for {city} offices — request the SDS pack before your first service.",
+    "Retail handover cleans in {city} are timed to your open date, not our default window.",
+    "Medical-adjacent sites in {city}: color-coded kits and sign-off photos available on request.",
+    "Quarterly carpet extraction in {city} is easier to hold if we book the lift before month-end.",
+    "After-hours routes in {city} fill first for recurring clients — mention your preferred window early.",
+    "Post-construction dust in {city}: we stage HEPA passes before furniture lands on the floor.",
+)
+_PROMO_PEST: tuple[str, ...] = (
+    "Same-week inspection slots in {city} when activity allows — we identify the pest before quoting treatment.",
+    "Written treatment plans in {city} list products, placement, and re-entry timing before we start.",
+    "Recurring prevention clients in {city} get a named technician file — not a different tech every visit.",
+    "Warranty callbacks in {city} are logged with photos so we treat the same harborage, not symptoms only.",
+    "Commercial kitchens in {city}: we coordinate after-hours service so bait stations and exclusion stay discreet.",
+)
+
 _PROMO_TRADES: tuple[str, ...] = (
     "Same-week openings for recurring work in {city} — call dispatch with your {activity} details.",
     "Emergency line staffed until 8pm weekdays; after-hours rates posted before we roll.",
@@ -579,13 +603,15 @@ def _promo_pool(vertical_id: str) -> tuple[str, ...]:
         return _PROMO_HOSPITALITY
     if v == "fitness":
         return _PROMO_FITNESS_WELLNESS
+    if v == "cleaning":
+        return _PROMO_CLEANING + _PROMO_TRADES[-3:]
+    if v == "pest_control":
+        return _PROMO_PEST
     if v in (
-        "cleaning",
         "plumbing",
         "hvac",
         "roofing",
         "landscaping",
-        "pest_control",
         "moving",
         "auto_repair",
         "electrical",
@@ -624,13 +650,12 @@ def _founded_year(site_identity: str, current_year: int) -> int:
 
 def _review_count(site_identity: str) -> int:
     h = int(hashlib.sha256(f"rc|{site_identity}".encode("utf-8")).hexdigest(), 16)
-    return 40 + (h % 160)
+    return 22 + (h % 248)
 
 
 def _review_avg(site_identity: str) -> str:
     h = int(hashlib.sha256(f"ra|{site_identity}".encode("utf-8")).hexdigest(), 16)
-    # 4.08 .. 4.97 in fine steps (less collision than six fixed strings).
-    v = 4.08 + (h % 900) / 1000.0
+    v = 3.85 + (h % 1150) / 1000.0
     return f"{v:.2f}"
 
 
@@ -898,6 +923,12 @@ def generate_brand(
         )
     else:
         street, city, region, postal, country, cc, area = pick_address_for_site(ident)
+    if str(country or "").strip() == "Canada":
+        street, city, region, postal = refine_gta_address_for_brand(
+            name, street, city, region, postal, country, ident
+        )
+    if str(country or "").strip() == "Ireland" and str(city or "").strip() == "Dublin" and addr_mode != "hybrid":
+        street = refine_dublin_address_for_brand(name, street, ident)
     # Basic format validations (keeps outputs looking real per country)
     ctry = str(country or "").strip()
     if ctry == "Canada" and postal and not _RE_CAN_POSTAL.match(str(postal).strip().upper()):
@@ -949,39 +980,47 @@ def generate_brand(
         _promos = tuple(cands) if cands else _promo_pool(vid)
     else:
         _promos = _promo_pool(vid)
+    promo_banner_pool: list[str] = []
+    if vid != "news":
+        for raw_p in _promos:
+            promo_banner_pool.append(
+                _format_promo_line(
+                    raw_p,
+                    brand_name=name,
+                    city=city,
+                    activity=act_promo,
+                ),
+            )
     if vid == "news":
         promo_banner_text = ""
     else:
-        promo_banner_text = _format_promo_line(
-            _promos[promo_h % len(_promos)],
-            brand_name=name,
-            city=city,
-            activity=act_promo,
-        )
+        promo_banner_text = promo_banner_pool[promo_h % len(promo_banner_pool)] if promo_banner_pool else ""
     gfont_url, body_ff, head_ff = _pick_font_stack(ident)
     palette = _brand_palette_from_identity(ident)
     handle = ((_slug_domain(name) or "brand")[:22]).strip("-") or "brand"
     soc_tw = soc_li = soc_fb = soc_ig = soc_tt = ""
-    if vid == "news":
-        soc_tw = f"https://twitter.com/{handle}"
-        soc_li = f"https://www.linkedin.com/company/{handle}"
-        soc_fb = f"https://www.facebook.com/{handle}"
-    elif vid == "clothing":
-        soc_ig = f"https://www.instagram.com/{handle}"
-        soc_tt = f"https://www.tiktok.com/@{handle}"
-        soc_fb = f"https://www.facebook.com/{handle}"
-    elif vid in ("marketing_agency", "consulting", "legal", "accounting", "real_estate"):
-        soc_li = f"https://www.linkedin.com/company/{handle}"
-        soc_fb = f"https://www.facebook.com/{handle}"
-        if rng.random() < 0.4:
+    fabricate_social = bool((brand_cfg or {}).get("fabricate_social_urls"))
+    if fabricate_social:
+        if vid == "news":
             soc_tw = f"https://twitter.com/{handle}"
-    elif vid in ("cafe_restaurant", "fitness", "landscaping", "dental", "medical"):
-        soc_ig = f"https://www.instagram.com/{handle}"
-        soc_fb = f"https://www.facebook.com/{handle}"
-    elif rng.random() < 0.5:
-        soc_fb = f"https://www.facebook.com/{handle}"
-        if rng.random() < 0.3:
+            soc_li = f"https://www.linkedin.com/company/{handle}"
+            soc_fb = f"https://www.facebook.com/{handle}"
+        elif vid == "clothing":
             soc_ig = f"https://www.instagram.com/{handle}"
+            soc_tt = f"https://www.tiktok.com/@{handle}"
+            soc_fb = f"https://www.facebook.com/{handle}"
+        elif vid in ("marketing_agency", "consulting", "legal", "accounting", "real_estate"):
+            soc_li = f"https://www.linkedin.com/company/{handle}"
+            soc_fb = f"https://www.facebook.com/{handle}"
+            if rng.random() < 0.4:
+                soc_tw = f"https://twitter.com/{handle}"
+        elif vid in ("cafe_restaurant", "fitness", "landscaping", "dental", "medical"):
+            soc_ig = f"https://www.instagram.com/{handle}"
+            soc_fb = f"https://www.facebook.com/{handle}"
+        elif rng.random() < 0.5:
+            soc_fb = f"https://www.facebook.com/{handle}"
+            if rng.random() < 0.3:
+                soc_ig = f"https://www.instagram.com/{handle}"
 
     # Business parameters
     team_lo, team_hi = _VERTICAL_TEAM_RANGE.get(vid, (4, 15))
@@ -994,12 +1033,23 @@ def generate_brand(
         weights=[6, 10, 14, 14, 12, 10, 8, 8, 6, 4],
         k=1,
     )[0]
+    if vid in ("cleaning", "pest_control"):
+        zone_n = min(zone_n, 5)
     service_area_zones = pick_districts_for_site(ident, city, zone_n, brand_name=name)
+    if service_area_zones and (city in TORONTO_METRO_DISTRICTS or city == "Toronto"):
+        rest = [z for z in service_area_zones if z != city]
+        service_area_zones = ([city] + rest)[:zone_n]
     zones_preview = ", ".join(service_area_zones[:10])
     if len(service_area_zones) > 10:
         zones_preview += ", and nearby areas"
     contact_districts_line = f"Neighborhoods we serve regularly: {zones_preview}." if service_area_zones else ""
-    geo_coords = pick_geo_for_city(city)
+    geo_coords = pick_geo_for_site(
+        ident,
+        city,
+        address_line1=street_clean,
+        postal_code=str(postal or ""),
+        address_mode=str(addr_mode or ""),
+    )
     lic_pool = _VERTICAL_LICENSES.get(vid, ())
     licenses = list(rng.sample(lic_pool, min(rng.randint(1, 3), len(lic_pool)))) if lic_pool else []
     cert_pool = _VERTICAL_CERTIFICATIONS.get(vid, ())
@@ -1019,6 +1069,10 @@ def generate_brand(
     suite_number = ""
     if rng.random() < 0.35 and street_clean:
         suite_number = f"Suite {rng.randint(100, 999)}"
+
+    pub_rating = (
+        int(hashlib.sha256(f"schema_rating|{ident}".encode("utf-8")).hexdigest(), 16) % 10
+    ) >= 3
 
     brand_out = {
         "generation_identity": ident,
@@ -1053,13 +1107,15 @@ def generate_brand(
         "certifications": certifications,
         "insurance": "Fully insured" if rng.random() < 0.7 else "Bonded & insured",
         "promo_banner_text": promo_banner_text,
+        "promo_banner_pool": promo_banner_pool,
         "social_facebook": soc_fb,
         "social_instagram": soc_ig,
         "social_tiktok": soc_tt,
         "social_twitter": soc_tw,
         "social_linkedin": soc_li,
-        "review_count": _review_count(ident),
-        "review_avg": _review_avg(ident),
+        "schema_publish_aggregate_rating": pub_rating,
+        "review_count": _review_count(ident) if pub_rating else None,
+        "review_avg": _review_avg(ident) if pub_rating else None,
         "reviews_profile_url": maps_search_url,
         "cuisine_type": _cuisine_type(ident) if vid == "cafe_restaurant" else "",
         **hours,

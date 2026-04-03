@@ -5,8 +5,10 @@
 - Один экземпляр скрипта (блокировка файла .dev/start_dev.lock).
 - Если порты API/frontend заняты — завершает слушающие процессы (Windows: taskkill /T;
   Unix: SIGTERM/SIGKILL). Повтор: --no-kill — только сообщение, без завершения.
-- При занятой блокировке пытается один раз завершить PID из .dev/start_dev.lock (прошлый
-  экземпляр скрипта), затем снова взять lock.
+- При занятой блокировке (flock) и без --no-kill: читает PID из lock, шлёт SIGTERM/SIGKILL
+  держателю и повторяет попытку (удобно после обрыва SSH или зависшего процесса).
+- На Linux uvicorn и Vite запускаются в отдельной session (setsid), чтобы Ctrl+C попадал
+  только в этот скрипт; остановка детей идёт через killpg — без «осиротевших» процессов.
 - Проверяет зависимости; опционально pip install / npm install.
 - Ждёт /api/health перед запуском Vite.
 - На Windows Vite запускается через `node …/vite.js` (без npm.cmd/vite.cmd), чтобы при Ctrl+C
@@ -14,7 +16,7 @@
 
   python start_dev.py
   python start_dev.py --open-browser
-  python start_dev.py --api-port 8000 --frontend-port 5173
+  python start_dev.py --api-host 0.0.0.0 --api-port 8010 --frontend-port 5180
 
 Коды выхода: 2 — уже запущен; 3/4 — порт занят; 5–11 — Python;
 12–15 — Node; 16 — порт frontend при ожидании; 17 — таймаут API; 18 — ошибка блокировки;
@@ -182,6 +184,18 @@ def listeners_on_port(port: int) -> list[tuple[int, str]]:
     return listeners_info_posix(port)
 
 
+def _pid_alive(pid: int) -> bool:
+    if pid <= 0:
+        return False
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
+
+
 def force_kill_pid(pid: int) -> bool:
     if pid <= 0 or pid == os.getpid():
         return False
@@ -304,16 +318,17 @@ def acquire_single_instance_lock(allow_kill_lock_holder: bool) -> tuple[Optional
     Возвращает (file_object, 0) при успехе или (None, exit_code) при ошибке.
     Файл нужно держать открытым до выхода.
     """
-    # Safety-first: do not kill an arbitrary PID from a stale lock file by default.
-    # If lock is held, it means another instance is currently running.
-    for attempt in range(1):
+    LOCK_PATH.parent.mkdir(parents=True, exist_ok=True)
+    max_rounds = 4 if allow_kill_lock_holder else 1
+
+    for round_i in range(max_rounds):
         try:
-            LOCK_PATH.parent.mkdir(parents=True, exist_ok=True)
             fp = open(LOCK_PATH, "a+b")
         except OSError as e:
             err(f"Не удалось открыть lock-файл: {e}")
             return None, 18
 
+        lock_ok = False
         try:
             if sys.platform == "win32":
                 import msvcrt
@@ -323,47 +338,74 @@ def acquire_single_instance_lock(allow_kill_lock_holder: bool) -> tuple[Optional
                 import fcntl
 
                 fcntl.flock(fp.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            lock_ok = True
         except OSError:
-            fp.close()
-            err("Скрипт уже запущен в другом терминале (или блокировка не снята).")
-            holder = read_lock_holder_pid()
-            if holder is not None:
-                gray_line(f"PID в lock-файле: {holder}")
-            info("Закройте другой терминал со start_dev.py и попробуйте снова.")
-            return None, 2
-        break
-    else:
-        return None, 2
+            pass
 
-    def _release() -> None:
-        try:
-            clear_state()
+        if lock_ok:
+
+            def _release() -> None:
+                try:
+                    clear_state()
+                    fp.seek(0)
+                    fp.truncate()
+                    if sys.platform == "win32":
+                        import msvcrt
+
+                        try:
+                            fp.seek(0)
+                            msvcrt.locking(fp.fileno(), msvcrt.LK_UNLCK, 1)
+                        except OSError:
+                            pass
+                    else:
+                        import fcntl
+
+                        try:
+                            fcntl.flock(fp.fileno(), fcntl.LOCK_UN)
+                        except OSError:
+                            pass
+                finally:
+                    try:
+                        fp.close()
+                    except OSError:
+                        pass
+
+            atexit.register(_release)
             fp.seek(0)
             fp.truncate()
-            if sys.platform == "win32":
-                import msvcrt
+            fp.write(str(os.getpid()).encode("utf-8"))
+            fp.flush()
+            return fp, 0
 
-                try:
-                    fp.seek(0)
-                    msvcrt.locking(fp.fileno(), msvcrt.LK_UNLCK, 1)
-                except OSError:
-                    pass
+        fp.close()
+        holder = read_lock_holder_pid()
+        if allow_kill_lock_holder and holder is not None and holder != os.getpid():
+            if _pid_alive(holder):
+                warn(
+                    f"Блокировка занята процессом PID {holder} — завершаю предыдущий экземпляр "
+                    f"(попытка {round_i + 1}/{max_rounds})…"
+                )
+                if not force_kill_pid(holder):
+                    err(
+                        f"Не удалось завершить PID {holder} (нет прав или процесс другого пользователя). "
+                        f"Попробуйте: kill {holder} или остановите сеанс, где запущен start_dev."
+                    )
             else:
-                import fcntl
+                gray_line(f"В lock указан PID {holder}, процесс уже не существует — повторяю захват…")
+            time.sleep(0.45)
+            continue
 
-                try:
-                    fcntl.flock(fp.fileno(), fcntl.LOCK_UN)
-                except OSError:
-                    pass
-        finally:
-            fp.close()
+        err("Скрипт уже запущен в другом терминале (или блокировка не снята).")
+        if holder is not None:
+            gray_line(f"PID в lock-файле: {holder}")
+        if not allow_kill_lock_holder:
+            info("Запустите без --no-kill, чтобы завершить держателя lock, или остановите тот процесс вручную.")
+        else:
+            info("Если это «зависший» PID — остановите его вручную (kill) и запустите снова.")
+        return None, 2
 
-    atexit.register(_release)
-    fp.seek(0)
-    fp.truncate()
-    fp.write(str(os.getpid()).encode("utf-8"))
-    fp.flush()
-    return fp, 0
+    err("Не удалось получить блокировку после повторных попыток.")
+    return None, 2
 
 
 def python_ok_for_imports() -> bool:
@@ -389,41 +431,71 @@ def verify_server_import() -> tuple[bool, str]:
     return r.returncode == 0, out.strip()
 
 
-def start_uvicorn(api_host: str, api_port: int) -> subprocess.Popen:
+def _popen_session_kwargs() -> dict:
     """
-    Один процесс в текущей консоли (и на Windows без отдельного окна).
-    Так проще останавливать dev и не оставлять «забытый» uvicorn на порту.
+    Отдельная группа процессов: на Linux Ctrl+C в терминале не убивает uvicorn/Vite напрямую —
+    ими заведует только этот скрипт (killpg), без «осиротевших» слушателей на портах.
+    """
+    if sys.platform == "win32":
+        return {"creationflags": getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)}
+    return {"preexec_fn": os.setsid}  # type: ignore[dict-item]
+
+
+def start_uvicorn(api_host: str, api_port: int, *, reload: bool) -> subprocess.Popen:
+    """
+    Дочерний процесс в новой session (POSIX) или process group (Windows) для чистой остановки.
     """
     env = {**os.environ, "PYTHONPATH": str(REPO_ROOT)}
-    kw: dict = {}
-    if sys.platform == "win32":
-        # keep child attached to this console, but allow clean termination
-        kw["creationflags"] = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
-    return subprocess.Popen(
-        [
-            sys.executable,
-            "-m",
-            "uvicorn",
-            "server.app:app",
-            "--reload",
-            f"--host={api_host}",
-            f"--port={api_port}",
-        ],
-        cwd=REPO_ROOT,
-        env=env,
-        **kw,
-    )
+    cmd = [
+        sys.executable,
+        "-m",
+        "uvicorn",
+        "server.app:app",
+    ]
+    if reload:
+        cmd.append("--reload")
+    cmd.extend([f"--host={api_host}", f"--port={api_port}"])
+    return subprocess.Popen(cmd, cwd=REPO_ROOT, env=env, **_popen_session_kwargs())
 
 
-def stop_api_process(proc: Optional[subprocess.Popen]) -> None:
+def stop_child_tree(proc: Optional[subprocess.Popen], label: str) -> None:
     if proc is None or proc.poll() is not None:
         return
     try:
-        proc.terminate()
+        warn(f"Останавливаю {label} (группа PID {proc.pid})…")
+        if sys.platform == "win32":
+            proc.terminate()
+            try:
+                proc.wait(timeout=8)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                try:
+                    proc.wait(timeout=4)
+                except subprocess.TimeoutExpired:
+                    pass
+            return
+        try:
+            os.killpg(proc.pid, signal.SIGTERM)
+        except ProcessLookupError:
+            return
+        except PermissionError:
+            proc.terminate()
+        try:
+            proc.wait(timeout=8)
+            return
+        except subprocess.TimeoutExpired:
+            pass
+        try:
+            os.killpg(proc.pid, signal.SIGKILL)
+        except (ProcessLookupError, PermissionError):
+            try:
+                proc.kill()
+            except OSError:
+                pass
         try:
             proc.wait(timeout=5)
         except subprocess.TimeoutExpired:
-            proc.kill()
+            pass
     except OSError:
         pass
 
@@ -432,24 +504,7 @@ def start_vite(frontend_port: int) -> subprocess.Popen:
     vcmd = vite_dev_command(frontend_port)
     if vcmd is None:
         raise SystemExit(19)
-    kw: dict = {}
-    if sys.platform == "win32":
-        kw["creationflags"] = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
-    return subprocess.Popen(vcmd, cwd=FRONTEND_DIR, **kw)
-
-
-def stop_process(proc: Optional[subprocess.Popen], name: str) -> None:
-    if proc is None or proc.poll() is not None:
-        return
-    try:
-        warn(f"Останавливаю {name} (PID {proc.pid})…")
-        proc.terminate()
-        try:
-            proc.wait(timeout=6)
-        except subprocess.TimeoutExpired:
-            proc.kill()
-    except OSError:
-        pass
+    return subprocess.Popen(vcmd, cwd=FRONTEND_DIR, **_popen_session_kwargs())
 
 
 def vite_dev_command(frontend_port: int) -> Optional[list[str]]:
@@ -486,8 +541,18 @@ def wait_for_health(url: str, timeout_sec: float, frontend_port: int) -> str:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Dev: uvicorn + Vite")
-    parser.add_argument("--api-port", type=int, default=8000)
-    parser.add_argument("--frontend-port", type=int, default=5173)
+    parser.add_argument(
+        "--api-host",
+        default="127.0.0.1",
+        help="Адрес прослушивания API (для VPS: 0.0.0.0)",
+    )
+    parser.add_argument("--api-port", type=int, default=8010)
+    parser.add_argument("--frontend-port", type=int, default=5180)
+    parser.add_argument(
+        "--no-reload",
+        action="store_true",
+        help="Без --reload у uvicorn (стабильнее на слабом сервере; нужен перезапуск вручную при смене кода)",
+    )
     parser.add_argument("--skip-deps", action="store_true", help="Не ставить pip/npm зависимости автоматически")
     parser.add_argument(
         "--no-kill",
@@ -510,23 +575,29 @@ def main() -> None:
     if lock_fp is None:
         sys.exit(code)
 
-    api_host = "127.0.0.1"
+    api_host = str(args.api_host).strip() or "127.0.0.1"
     api_proc: Optional[subprocess.Popen] = None
     vite_proc: Optional[subprocess.Popen] = None
+    pending_signal: list[int] = [0]
 
     def _shutdown(exit_code: int) -> None:
-        stop_process(vite_proc, "Vite")
-        stop_api_process(api_proc)
+        stop_child_tree(vite_proc, "Vite")
+        stop_child_tree(api_proc, "API (uvicorn)")
         clear_state()
         raise SystemExit(exit_code)
 
     def _on_signal(signum: int, _frame: object | None = None) -> None:
-        _shutdown(130 if signum in (getattr(signal, "SIGINT", 2),) else 143)
+        # В обработчике сигнала — минимум работы; тяжёлую остановку делаем в главном цикле.
+        if pending_signal[0]:
+            os._exit(128 + int(signum))
+        pending_signal[0] = signum
 
     try:
         signal.signal(signal.SIGINT, _on_signal)
         if hasattr(signal, "SIGTERM"):
             signal.signal(signal.SIGTERM, _on_signal)  # type: ignore[arg-type]
+        if hasattr(signal, "SIGHUP"):
+            signal.signal(signal.SIGHUP, _on_signal)  # type: ignore[arg-type]
     except Exception:
         pass
 
@@ -588,9 +659,14 @@ def main() -> None:
                 err("npm install завершился с ошибкой.")
                 sys.exit(15)
 
+        health_host = "127.0.0.1" if api_host in ("0.0.0.0", "::", "[::]") else api_host
         info(f"Запуск API: http://{api_host}:{args.api_port}/")
-        info("(uvicorn в фоне этого терминала; логи API идут сюда же, выше/ниже вывода Vite)")
-        api_proc = start_uvicorn(api_host, args.api_port)
+        if api_host not in ("127.0.0.1", "localhost"):
+            info(f"Проверка health с этой машины: http://{health_host}:{args.api_port}/api/health")
+        if args.no_reload:
+            info("Режим без --reload (uvicorn один процесс).")
+        info("(uvicorn в отдельной группе процессов; Ctrl+C останавливает его через этот скрипт.)")
+        api_proc = start_uvicorn(api_host, args.api_port, reload=not args.no_reload)
         write_state(
             {
                 "script_pid": os.getpid(),
@@ -602,15 +678,15 @@ def main() -> None:
             }
         )
 
-        health_url = f"http://{api_host}:{args.api_port}/api/health"
+        health_url = f"http://{health_host}:{args.api_port}/api/health"
         info(f"Ожидание ответа API ({health_url})...")
         health = wait_for_health(health_url, 45.0, args.frontend_port)
         if health == "frontend_busy":
-            stop_api_process(api_proc)
+            stop_child_tree(api_proc, "API (uvicorn)")
             sys.exit(16)
         if health == "timeout":
             err("API не ответил за 45 с. Проверьте процесс uvicorn (порт, импорты, firewall).")
-            stop_api_process(api_proc)
+            stop_child_tree(api_proc, "API (uvicorn)")
             sys.exit(17)
 
         ok("API готов.")
@@ -637,8 +713,15 @@ def main() -> None:
             }
         )
 
-        # Main loop: keep running until one process exits.
+        # Main loop: keep running until one process exits или сигнал (Ctrl+C / kill / SIGHUP).
         while True:
+            if pending_signal[0]:
+                sig = pending_signal[0]
+                info("Получен сигнал остановки — завершаю Vite и API…")
+                stop_child_tree(vite_proc, "Vite")
+                stop_child_tree(api_proc, "API (uvicorn)")
+                clear_state()
+                sys.exit(128 + int(sig))
             time.sleep(0.35)
             if api_proc and api_proc.poll() is not None:
                 err(f"API завершился (код {api_proc.returncode}). Останавливаю Vite…")
@@ -647,13 +730,13 @@ def main() -> None:
                 info(f"Vite завершился (код {vite_proc.returncode}). Останавливаю API…")
                 _shutdown(int(vite_proc.returncode or 0))
     except SystemExit as e:
-        stop_process(vite_proc, "Vite")
-        stop_api_process(api_proc)
+        stop_child_tree(vite_proc, "Vite")
+        stop_child_tree(api_proc, "API (uvicorn)")
         clear_state()
         raise
     except KeyboardInterrupt:
-        stop_process(vite_proc, "Vite")
-        stop_api_process(api_proc)
+        stop_child_tree(vite_proc, "Vite")
+        stop_child_tree(api_proc, "API (uvicorn)")
         clear_state()
         sys.exit(130)
 

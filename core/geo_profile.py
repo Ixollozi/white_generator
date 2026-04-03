@@ -52,4 +52,9 @@ def merge_geo_into_brand(brand: dict[str, Any], brand_cfg: dict[str, Any] | None
     out = {**brand, "geo_profile": geo}
     lang = str(geo.get("language") or "en").strip() or "en"
     out["locale"] = lang
+    if str(out.get("country") or "").strip() == "Canada":
+        g = dict(out["geo_profile"])
+        g["currency_code"] = "CAD"
+        g["currency_symbol"] = "C$"
+        out["geo_profile"] = g
     return out

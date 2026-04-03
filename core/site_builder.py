@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import random
 from pathlib import Path
 from typing import Any
@@ -11,6 +12,25 @@ from core.site_context import SiteContext
 from core.template_loader import make_template_env, render_string
 
 
+_PROF_PROMO_ONE_SITE: frozenset[str] = frozenset(
+    {"legal", "consulting", "medical", "dental", "accounting"},
+)
+
+
+def _promo_banner_for_page(render_vars: dict[str, Any], page_key: str) -> str:
+    pool = render_vars.get("promo_banner_pool")
+    if not isinstance(pool, list) or len(pool) < 2:
+        return str(render_vars.get("promo_banner_text") or "").strip()
+    ident = str(render_vars.get("generation_identity") or render_vars.get("brand_name") or "")
+    vid = str(render_vars.get("vertical_id") or "").strip()
+    seed_key = ident if vid in _PROF_PROMO_ONE_SITE else f"{page_key}|{ident}"
+    h = int(
+        hashlib.sha256(f"promo|{seed_key}".encode("utf-8")).hexdigest(),
+        16,
+    )
+    return str(pool[h % len(pool)]).strip() or str(render_vars.get("promo_banner_text") or "")
+
+
 def _page_href(page_key: str, ext: str) -> str:
     e = ext.strip() or "php"
     if page_key == "index":
@@ -18,27 +38,39 @@ def _page_href(page_key: str, ext: str) -> str:
     return f"{page_key}.php" if e == "php" else f"{page_key}.{e}"
 
 
+def _resolved_page_href(page_key: str, ext: str, render_vars: dict[str, Any]) -> str:
+    sp = render_vars.get("seo_pages")
+    if isinstance(sp, dict):
+        meta = sp.get(page_key)
+        if isinstance(meta, dict):
+            pth = str(meta.get("path") or "").strip()
+            if pth:
+                return pth
+    return _page_href(page_key, ext)
+
+
 def breadcrumb_items(page_key: str, render_vars: dict[str, Any]) -> list[dict[str, str | None]]:
     if page_key == "index":
         return []
     ext = str(render_vars.get("page_extension") or "php")
-    home_h = _page_href("index", ext)
+    home_h = _resolved_page_href("index", ext, render_vars)
+    ind_lbl = str(render_vars.get("industries_page_header") or "Industries").strip() or "Industries"
     labels_hrefs: dict[str, tuple[str, str]] = {
-        "about": (str(render_vars.get("about_page_header") or "About"), _page_href("about", ext)),
-        "contact": (str(render_vars.get("contact_page_header") or "Contact"), _page_href("contact", ext)),
-        "services": (str(render_vars.get("services_heading") or "Services"), _page_href("services", ext)),
-        "blog": (str(render_vars.get("blog_page_header") or "Blog"), _page_href("blog", ext)),
-        "faq": (str(render_vars.get("faq_page_header") or "FAQ"), _page_href("faq", ext)),
-        "team": ("Team", _page_href("team", ext)),
-        "testimonials": ("Testimonials", _page_href("testimonials", ext)),
-        "pricing": ("Pricing", _page_href("pricing", ext)),
-        "process": ("Our Process", _page_href("process", ext)),
-        "portfolio": ("Portfolio", _page_href("portfolio", ext)),
-        "case_studies": ("Case studies", _page_href("case_studies", ext)),
-        "careers": ("Careers", _page_href("careers", ext)),
-        "industries": ("Industries", _page_href("industries", ext)),
-        "resources": (str(render_vars.get("resources_page_header") or "Resources"), _page_href("resources", ext)),
-        "service_areas": ("Service areas", _page_href("service_areas", ext)),
+        "about": (str(render_vars.get("about_page_header") or "About"), _resolved_page_href("about", ext, render_vars)),
+        "contact": (str(render_vars.get("contact_page_header") or "Contact"), _resolved_page_href("contact", ext, render_vars)),
+        "services": (str(render_vars.get("services_heading") or "Services"), _resolved_page_href("services", ext, render_vars)),
+        "blog": (str(render_vars.get("blog_page_header") or "Blog"), _resolved_page_href("blog", ext, render_vars)),
+        "faq": (str(render_vars.get("faq_page_header") or "FAQ"), _resolved_page_href("faq", ext, render_vars)),
+        "team": ("Team", _resolved_page_href("team", ext, render_vars)),
+        "testimonials": ("Testimonials", _resolved_page_href("testimonials", ext, render_vars)),
+        "pricing": ("Pricing", _resolved_page_href("pricing", ext, render_vars)),
+        "process": ("Our Process", _resolved_page_href("process", ext, render_vars)),
+        "portfolio": ("Portfolio", _resolved_page_href("portfolio", ext, render_vars)),
+        "case_studies": ("Case studies", _resolved_page_href("case_studies", ext, render_vars)),
+        "careers": ("Careers", _resolved_page_href("careers", ext, render_vars)),
+        "industries": (ind_lbl, _resolved_page_href("industries", ext, render_vars)),
+        "resources": (str(render_vars.get("resources_page_header") or "Resources"), _resolved_page_href("resources", ext, render_vars)),
+        "service_areas": ("Service areas", _resolved_page_href("service_areas", ext, render_vars)),
     }
     if page_key not in labels_hrefs:
         return [{"label": "Home", "href": home_h}]
@@ -164,8 +196,10 @@ def compose_pages(
 
     for page_key, body in page_bodies.items():
         page_seo = seo_pages.get(page_key) or {}
+        rv_page = dict(render_vars)
+        rv_page["promo_banner_text"] = _promo_banner_for_page(render_vars, page_key)
         html = template.render(
-            **render_vars,
+            **rv_page,
             body_html=body,
             page_key=page_key,
             page_title=page_seo.get("title") or render_vars.get("brand_name", "Site"),

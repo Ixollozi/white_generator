@@ -59,4 +59,9 @@ class SiteContext:
         else:
             out["insights_href"] = ""
             out["insights_label"] = "Blog"
+        out["core_stylesheet_href"] = str(self.meta.get("core_stylesheet_href") or "css/core.css")
+        out["layout_stylesheet_href"] = str(self.meta.get("layout_stylesheet_href") or "css/layout.css")
+        out["vendor_stylesheet_href"] = str(self.meta.get("vendor_stylesheet_href") or "css/vendor.css")
+        se = self.meta.get("stylesheet_extras")
+        out["stylesheet_extras"] = list(se) if isinstance(se, list) else []
         return out

@@ -118,6 +118,36 @@ _LAST_SINGAPORE: tuple[str, ...] = (
     "Tay",
 )
 
+_LATINO_FIRST_NAMES_CA: frozenset[str] = frozenset(
+    {
+        "Juan",
+        "Diego",
+        "Carlos",
+        "Miguel",
+        "Jose",
+        "Luis",
+        "Francisco",
+        "Antonio",
+        "Ramon",
+        "Javier",
+    },
+)
+
+_IRISH_LAST_NAMES_CA: frozenset[str] = frozenset(
+    {
+        "Kerrigan",
+        "O'Brien",
+        "Murphy",
+        "Walsh",
+        "Byrne",
+        "Ryan",
+        "Quinn",
+        "Kelly",
+        "Lynch",
+        "Doyle",
+    },
+)
+
 _LAST_IRISH: tuple[str, ...] = (
     "Murphy", "Kelly", "O'Brien", "Ryan", "Walsh", "Byrne", "Doyle", "Lynch", "Clarke",
     "Flynn", "Quinn", "Moore", "Kennedy", "Brennan", "Carroll", "Sheehan", "Power", "Burke",
@@ -166,6 +196,11 @@ def pick_full_name(
     ln = la[h2 % len(la)]
     if fn.lower() == ln.lower():
         ln = la[(h2 + 17) % len(la)]
+    if c == "Canada" and fn in _LATINO_FIRST_NAMES_CA and ln in _IRISH_LAST_NAMES_CA:
+        for bump in range(1, 55):
+            ln = la[(h2 + bump * 23 + 11) % len(la)]
+            if fn not in _LATINO_FIRST_NAMES_CA or ln not in _IRISH_LAST_NAMES_CA:
+                break
     return f"{fn} {ln}"
 
 

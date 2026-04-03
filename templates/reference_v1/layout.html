@@ -53,9 +53,12 @@
     body { font-family: {{ body_font_family | safe }}; }
     h1, h2, h3, h4, h5, h6 { font-family: {{ heading_font_family | safe }}; }
   </style>
-  <link rel="stylesheet" href="css/core.css">
-  <link rel="stylesheet" href="css/layout.css">
-  <link rel="stylesheet" href="css/vendor.css">
+  <link rel="stylesheet" href="{{ core_stylesheet_href }}">
+  <link rel="stylesheet" href="{{ layout_stylesheet_href }}">
+  <link rel="stylesheet" href="{{ vendor_stylesheet_href }}">
+  {% for href in stylesheet_extras %}
+  <link rel="stylesheet" href="{{ href }}">
+  {% endfor %}
   <link rel="stylesheet" href="css/reference.css">
 </head>
 <body class="reference-site{% if body_extra_class %} {{ body_extra_class }}{% endif %}">

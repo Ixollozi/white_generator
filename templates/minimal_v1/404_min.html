@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="{{ locale | default('en') }}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ page_title | default('Page not found') }}</title>
+  <meta name="description" content="{{ page_description | default('The page could not be found.') }}">
+  <meta name="robots" content="noindex, follow">
+  {% if page_canonical %}
+  <link rel="canonical" href="{{ page_canonical }}">
+  {% endif %}
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+</head>
+<body style="font-family:system-ui,Segoe UI,sans-serif;margin:0;padding:2rem;line-height:1.55;color:#0f172a;background:#fff;">
+  <main style="max-width:36rem;">
+    <h1 style="font-size:1.35rem;margin:0 0 0.75rem;">{{ legal_title }}</h1>
+    <p style="margin:0 0 1rem;color:#334155;">{{ legal_body }}</p>
+    <p style="margin:0;">
+      <a href="{% if page_extension == 'php' %}index.php{% else %}index.{{ page_extension }}{% endif %}" style="color:#0f172a;">Home</a>
+      · <a href="contact.{{ page_extension }}" style="color:#0f172a;">Contact</a>
+    </p>
+  </main>
+</body>
+</html>

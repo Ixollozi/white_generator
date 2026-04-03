@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import random
+import re
 from typing import Any, Literal
 
 # Real major thoroughfares per metro (deterministic pick by site hash).
@@ -66,6 +67,16 @@ _CITY_STREETS: dict[str, tuple[str, ...]] = {
     "Dublin": ("Pearse St", "Capel St", "George St", "South Lotts Rd", "Thomas St"),
     "Sydney": ("George St", "Pitt St", "Liverpool St", "Kent St", "York St"),
     "Melbourne": ("Collins St", "Bourke St", "Flinders St", "Swanston St", "Elizabeth St"),
+    "Mississauga": (
+        "Hurontario St",
+        "Dundas St W",
+        "Mavis Rd",
+        "Cawthra Rd",
+        "Burnhamthorpe Rd W",
+        "Eglinton Ave W",
+        "Lakeshore Rd W",
+        "Square One Dr",
+    ),
 }
 _STREETS_FALLBACK: tuple[str, ...] = ("Main St", "High St", "Centre Ave", "Market St")
 
@@ -159,8 +170,11 @@ DISTRICTS: dict[str, tuple[str, ...]] = {
     ),
 }
 
+TORONTO_METRO_DISTRICTS: frozenset[str] = frozenset(DISTRICTS.get("Toronto", ()))
+
 CITY_GEO: dict[str, tuple[float, float]] = {
     "Toronto": (43.6532, -79.3832),
+    "Mississauga": (43.5890, -79.6441),
     "Vancouver": (49.2827, -123.1207),
     "Calgary": (51.0447, -114.0719),
     "Montreal": (45.5017, -73.5673),
@@ -233,6 +247,191 @@ def _pick_vancouver_districts_stratified(site_identity: str, brand_name: str, n_
     return picked[:n_want]
 
 
+_CALGARY_DISTRICT_BUCKETS: tuple[tuple[str, ...], ...] = (
+    ("Beltline", "Mission", "Bankview", "Altadore", "Inglewood", "Bridgeland"),
+    ("Kensington", "Bowness", "Varsity", "Brentwood", "Marda Loop"),
+    ("Airdrie", "Cochrane", "Okotoks", "Chestermere"),
+)
+
+_TORONTO_DISTRICT_BUCKETS: tuple[tuple[str, ...], ...] = (
+    ("Leslieville", "The Beaches", "Liberty Village", "Yorkville", "East York"),
+    ("North York", "Scarborough", "Etobicoke"),
+    ("Mississauga", "Markham", "Vaughan", "Brampton", "Richmond Hill", "Oakville", "Pickering"),
+)
+
+_MONTREAL_DISTRICT_BUCKETS: tuple[tuple[str, ...], ...] = (
+    ("Plateau Mont-Royal", "Mile End", "Griffintown", "Westmount", "Outremont", "NDG"),
+    ("Verdun", "Hochelaga", "Rosemont", "Villeray", "Pointe-Saint-Charles", "Old Montreal"),
+    ("Laval", "Longueuil", "Saint-Laurent"),
+)
+
+# Dublin: bucket by geography so two sites rarely get the same zone set; pairs with street bias below.
+_DUBLIN_DISTRICT_BUCKETS: tuple[tuple[str, ...], ...] = (
+    ("Inchicore", "Crumlin", "Drimnagh", "Walkinstown", "Kilmainham", "Harold's Cross", "Terenure"),
+    ("Ringsend", "Sandymount", "Ballsbridge", "Donnybrook", "Rathmines", "Ranelagh"),
+    ("Clontarf", "Killester", "Raheny", "Howth", "Malahide", "Portmarnock"),
+    ("Phibsborough", "Cabra", "Glasnevin", "Drumcondra", "Finglas"),
+    ("Tallaght", "Lucan", "Blanchardstown", "Clondalkin", "Castleknock"),
+    ("Blackrock", "Dun Laoghaire", "Dalkey", "Stillorgan", "Stepaside"),
+)
+
+
+def _mississauga_postal_for_street(street: str, salt: int) -> str:
+    letters = "ABCEGHJKLMNPRSTVWXYZ"
+    n = len(letters)
+    opts = ("L4W", "L5B", "L5A", "L5V", "L4Z", "L5C")
+    fsa = opts[salt % len(opts)]
+    ld1 = 1 + (salt % 9)
+    ch = letters[(salt * 11) % n]
+    ld2 = 1 + ((salt * 7) % 9)
+    return f"{fsa} {ld1}{ch}{ld2}"
+
+
+def refine_gta_address_for_brand(
+    brand_name: str,
+    line1: str,
+    city: str,
+    region: str,
+    postal: str,
+    country: str,
+    site_identity: str,
+) -> tuple[str, str, str, str]:
+    """
+    If the brand name embeds a GTA municipality (e.g. Mississauga in 'Mississauga Pest Management'),
+    align street, city, and postal so the site does not read Toronto while the name says Mississauga.
+    """
+    bn = (brand_name or "").strip()
+    if not bn:
+        return line1, city, region, postal
+    ctry = str(country or "").strip()
+    if not ctry or ctry != "Canada":
+        return line1, city, region, postal
+    reg_u = str(region or "").strip().upper()
+    if reg_u and reg_u not in ("ON", "ONTARIO"):
+        return line1, city, region, postal
+    metro_names = sorted(
+        (m for m in TORONTO_METRO_DISTRICTS if len(str(m)) >= 5),
+        key=lambda x: len(str(x)),
+        reverse=True,
+    )
+    candidates = ["Toronto", *metro_names]
+    seen: set[str] = set()
+    ordered: list[str] = []
+    for c in candidates:
+        cl = c.lower()
+        if cl not in seen:
+            seen.add(cl)
+            ordered.append(c)
+    bn_low = bn.lower()
+    hit: str | None = None
+    for m in ordered:
+        if re.search(r"\b" + re.escape(m.lower()) + r"\b", bn_low):
+            hit = m
+            break
+    if not hit:
+        return line1, city, region, postal
+    target_city = "Toronto" if hit == "Toronto" else hit
+    if (city or "").strip() == target_city:
+        return line1, city, region, postal
+    streets = _CITY_STREETS.get(target_city) or _CITY_STREETS.get("Toronto") or _STREETS_FALLBACK
+    h = int(hashlib.sha256(f"{site_identity}|gtaaddr|{target_city}".encode("utf-8")).hexdigest(), 16)
+    street = streets[h % len(streets)]
+    snum = str(100 + (h % 799))
+    new_line = f"{snum} {street}"
+    reg_out = str(region or "").strip() or "ON"
+    if target_city == "Mississauga":
+        new_postal = _mississauga_postal_for_street(street, h)
+    else:
+        new_postal = _toronto_postal_for_street(street, h)
+    return new_line, target_city, reg_out, new_postal
+
+
+def refine_dublin_address_for_brand(brand_name: str, line1: str, site_identity: str) -> str:
+    """
+    If the brand name embeds a Dublin district, align street with that area so
+    we do not pair e.g. 'Inchicore …' with South Lotts (east docklands).
+    """
+    bn = (brand_name or "").strip().lower()
+    if not bn or not line1.strip():
+        return line1
+    dublin_pool = DISTRICTS.get("Dublin", ())
+    if not dublin_pool:
+        return line1
+    districts_sorted = sorted((str(d) for d in dublin_pool), key=len, reverse=True)
+    hit = next((d for d in districts_sorted if d.lower() in bn), None)
+    if not hit:
+        return line1
+    west_south = {
+        "inchicore", "crumlin", "drimnagh", "walkinstown", "kilmainham",
+        "harold's cross", "terenure", "cabra", "phibsborough",
+    }
+    east_bay = {
+        "ringsend", "sandymount", "ballsbridge", "clontarf", "howth",
+        "malahide", "dun laoghaire", "blackrock", "dalkey",
+    }
+    hl = hit.lower()
+    if hl in west_south or any(x in hl for x in ("crumlin", "drimnagh", "inchicore", "kilmainham")):
+        street_opts = ("Thomas St", "George St", "Capel St")
+    elif hl in east_bay or hl in ("ringsend", "sandymount"):
+        street_opts = ("South Lotts Rd", "Pearse St")
+    else:
+        street_opts = ("Pearse St", "Capel St", "George St")
+    h = int(hashlib.sha256(f"{site_identity}|dubaddr|{hit}".encode("utf-8")).hexdigest(), 16)
+    street = street_opts[h % len(street_opts)]
+    m = re.match(r"^(\d+)\s+", line1.strip())
+    snum = m.group(1) if m else str(120 + (h % 700))
+    return f"{snum} {street}"
+
+
+def _pick_stratified_districts(
+    site_identity: str,
+    brand_name: str,
+    city: str,
+    buckets: tuple[tuple[str, ...], ...],
+    n_want: int,
+) -> list[str]:
+    """Round-robin across buckets (same pattern as Vancouver) so two sites rarely share the same zone set."""
+    h = int(
+        hashlib.sha256(
+            f"districts|{site_identity}|{city}|{(brand_name or '').strip()}".encode("utf-8"),
+        ).hexdigest(),
+        16,
+    )
+    rng = random.Random(h)
+    pool_buckets = [list(b) for b in buckets]
+    order = list(range(len(pool_buckets)))
+    rng.shuffle(order)
+    for b in pool_buckets:
+        rng.shuffle(b)
+    picked: list[str] = []
+    rnd = 0
+    guard = 0
+    while len(picked) < n_want and guard < 200:
+        guard += 1
+        progressed = False
+        for bi in order:
+            if len(picked) >= n_want:
+                break
+            bucket = pool_buckets[bi]
+            if rnd < len(bucket):
+                c = bucket[rnd]
+                if c not in picked:
+                    picked.append(c)
+                progressed = True
+        if not progressed:
+            break
+        rnd += 1
+    if len(picked) < n_want:
+        flat = [x for b in pool_buckets for x in b]
+        rng.shuffle(flat)
+        for z in flat:
+            if len(picked) >= n_want:
+                break
+            if z not in picked:
+                picked.append(z)
+    return picked[:n_want]
+
+
 def pick_districts_for_site(
     site_identity: str,
     city: str,
@@ -243,6 +442,14 @@ def pick_districts_for_site(
     n_want = min(max(1, count), 12)
     if city == "Vancouver":
         return _pick_vancouver_districts_stratified(site_identity, brand_name, n_want)
+    if city == "Calgary":
+        return _pick_stratified_districts(site_identity, brand_name, city, _CALGARY_DISTRICT_BUCKETS, n_want)
+    if city == "Toronto" or city in TORONTO_METRO_DISTRICTS:
+        return _pick_stratified_districts(site_identity, brand_name, "Toronto", _TORONTO_DISTRICT_BUCKETS, n_want)
+    if city == "Montreal":
+        return _pick_stratified_districts(site_identity, brand_name, city, _MONTREAL_DISTRICT_BUCKETS, n_want)
+    if city == "Dublin":
+        return _pick_stratified_districts(site_identity, brand_name, city, _DUBLIN_DISTRICT_BUCKETS, n_want)
     pool = list(DISTRICTS.get(city, ()))
     if not pool:
         return []
@@ -262,6 +469,29 @@ def pick_geo_for_city(city: str) -> tuple[float, float] | None:
     return CITY_GEO.get(city)
 
 
+def pick_geo_for_site(
+    site_identity: str,
+    city: str,
+    *,
+    address_line1: str = "",
+    postal_code: str = "",
+    address_mode: str = "",
+) -> tuple[float, float] | None:
+    """City centroid plus deterministic jitter so two sites in the same city rarely share identical coords."""
+    mode = str(address_mode or "").strip().lower()
+    if mode in {"fictional", "fake"}:
+        return None
+    base = CITY_GEO.get(city)
+    if not base:
+        return None
+    seed = f"geo|{site_identity}|{address_line1}|{postal_code}|{city}"
+    h = int(hashlib.sha256(seed.encode("utf-8")).hexdigest(), 16)
+    # ~±4.5 km latitude scale; longitude similar at mid-latitudes
+    dlat = ((h % 9001) - 4500) / 100_000.0
+    dlng = (((h // 7) % 9001) - 4500) / 100_000.0
+    return (round(base[0] + dlat, 5), round(base[1] + dlng, 5))
+
+
 def pick_surname(site_identity: str) -> str:
     h = int(hashlib.sha256(f"surname|{site_identity}".encode("utf-8")).hexdigest(), 16)
     return SURNAMES[h % len(SURNAMES)]
@@ -271,6 +501,48 @@ def _can_postal(i: int) -> str:
     letters = "ABCEGHJKLMNPRSTVWXYZ"
     n = len(letters)
     return f"M{1 + (i % 8)}{letters[i % n]} {1 + (i % 9)}{letters[(i * 5) % n]}{1 + (i % 9)}"
+
+
+def _toronto_fsa_prefixes(street: str) -> tuple[str, ...]:
+    """Toronto forward sortation areas — avoid invented M7* etc.; bias to known downtown/GTA FSAs."""
+    s = (street or "").upper()
+    if any(
+        x in s
+        for x in (
+            "BAY ST",
+            "FRONT ST",
+            "KING ST",
+            "ADELAIDE ST",
+            "RICHMOND ST",
+            "YONGE ST",
+            "UNIVERSITY AVE",
+        )
+    ):
+        return ("M5H", "M5J", "M5K", "M5L", "M5G", "M5C")
+    if "SPADINA" in s or "BATHURST" in s or "OSSINGTON" in s:
+        return ("M5T", "M6J", "M6K", "M5V")
+    if "BLOOR" in s or "COLLEGE ST" in s:
+        return ("M5S", "M5R", "M4W", "M4V")
+    if "QUEEN ST" in s or "DUNDAS" in s:
+        return ("M5A", "M5B", "M5C", "M5T", "M5V")
+    if "PARLIAMENT" in s or "JARVIS" in s:
+        return ("M4X", "M5A", "M5B", "M5C")
+    if "FINCH" in s or "ST CLAIR" in s or "EGLINTON" in s:
+        return ("M4N", "M5N", "M6A", "M2N")
+    if "DUFFERIN" in s:
+        return ("M6E", "M6G", "M6H", "M6P")
+    return ("M5H", "M5J", "M5K", "M5L", "M4W", "M5G", "M5C", "M5T")
+
+
+def _toronto_postal_for_street(street: str, salt: int) -> str:
+    letters = "ABCEGHJKLMNPRSTVWXYZ"
+    n = len(letters)
+    opts = _toronto_fsa_prefixes(street)
+    fsa = opts[salt % len(opts)]
+    ld1 = 1 + (salt % 9)
+    ch = letters[(salt * 11) % n]
+    ld2 = 1 + ((salt * 7) % 9)
+    return f"{fsa} {ld1}{ch}{ld2}"
 
 
 def _can_postal_van(i: int) -> str:
@@ -387,6 +659,24 @@ def _au_postal_mel(i: int) -> str:
     return f"{3000 + (i * 23) % 500}"
 
 
+def _sydney_postal_for_street(street: str, salt: int) -> str:
+    s = (street or "").upper()
+    if "LIVERPOOL" in s:
+        return "2010"
+    if any(x in s for x in ("GEORGE ST", "PITT ST", "KENT ST", "YORK ST")):
+        return "2000"
+    opts = ("2000", "2010", "2021", "2060", "2030", "2042")
+    return opts[salt % len(opts)]
+
+
+def _melbourne_postal_for_street(street: str, salt: int) -> str:
+    s = (street or "").upper()
+    if any(x in s for x in ("COLLINS ST", "BOURKE ST", "FLINDERS ST", "SWANSTON ST", "ELIZABETH ST")):
+        return "3000"
+    opts = ("3000", "3006", "3051", "3121", "3141", "3205")
+    return opts[salt % len(opts)]
+
+
 _BASE_META: tuple[tuple[str, str, str, str, str | None, type], ...] = (
     ("Toronto", "ON", "Canada", "+1", "416", _can_postal),
     ("Toronto", "ON", "Canada", "+1", "647", _can_postal),
@@ -412,6 +702,12 @@ def _build_rows() -> list[tuple[str, str, str, str, str, str, str | None, int]]:
                 postal = _calgary_postal_for_street(street, idx)
             elif city == "Vancouver" and country == "Canada":
                 postal = _vancouver_postal_for_street(street, idx)
+            elif city == "Toronto" and country == "Canada":
+                postal = _toronto_postal_for_street(street, idx)
+            elif city == "Sydney":
+                postal = _sydney_postal_for_street(street, idx)
+            elif city == "Melbourne":
+                postal = _melbourne_postal_for_street(street, idx)
             else:
                 postal = postal_fn(idx)
             sr = _STREET_NUMBER_RANGES.get(street)

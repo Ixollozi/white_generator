@@ -42,7 +42,14 @@ def pick_component(
     strict: bool,
 ) -> ComponentPick:
     meta = _load_meta(components_dir, component_type)
-    variants = meta.get("variants") or []
+    variants = list(meta.get("variants") or [])
+    vid = str(variables.get("vertical_id") or "").strip()
+    if component_type == "contact_block" and vid in ("cafe_restaurant", "cleaning"):
+        def _is_dispatch_variant(v: Any) -> bool:
+            fn = v if isinstance(v, str) else str((v or {}).get("file") or (v or {}).get("path") or "")
+            return fn == "contact_block_3.html"
+
+        variants = [v for v in variants if not _is_dispatch_variant(v)]
     if not variants:
         raise ValueError(f"No variants for component type {component_type}")
     choice = rng.choice(variants)

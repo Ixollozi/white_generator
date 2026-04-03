@@ -22,6 +22,7 @@ from core.prose_vary import (
     inject_local_detail,
     massage_first_html_paragraph,
     pick_register,
+    pick_register_for_blog_post,
     prose_chatty_strength,
     prose_humanize_enabled,
     prose_micro_imperfections_enabled,
@@ -41,8 +42,15 @@ _TRADES_VERTICALS: frozenset[str] = frozenset(
     {"hvac", "plumbing", "electrical", "roofing", "landscaping", "pest_control", "auto_repair", "moving"},
 )
 # Blog slugs: avoid noisy geo tails + duplicate tokens for professional / clinical sites.
+# Field-service vertical where post-type slug fragments read as fake “tags” (readiness, workflow, …).
+_SLUG_TITLE_ONLY_FIELD_VERTICALS: frozenset[str] = frozenset({"pest_control"})
+
 _PROF_BLOG_SLUG_VERTICALS: frozenset[str] = frozenset(
     {"accounting", "legal", "consulting", "medical", "dental"},
+)
+# Office/professional sites: no service-area spam, portfolio as matters, aligned case copy.
+_PROF_OFFICE_VERTICALS: frozenset[str] = frozenset(
+    {"legal", "consulting", "medical", "dental", "accounting"},
 )
 
 
@@ -340,6 +348,63 @@ def _dedup_sections_html(sections: list[dict[str, Any]]) -> list[dict[str, Any]]
     return out
 
 
+def _strip_meta_prefix_for_slug(title: str) -> str:
+    """Remove generator-style lead-ins so slugs are not dominated by blueprint-/case-snapshot- style tokens."""
+    s = (title or "").strip()
+    if not s:
+        return s
+    cut = True
+    while cut:
+        cut = False
+        low = s.lower()
+        for p in (
+            "blueprint:",
+            "case snapshot:",
+            "field notes:",
+            "field note:",
+            "signals on ",
+            "reference:",
+            "readiness for ",
+            "quick prep:",
+            "compared:",
+            "three paths on ",
+            "internal note:",
+            "update:",
+            "dispatch:",
+        ):
+            if low.startswith(p):
+                s = s[len(p) :].strip()
+                cut = True
+                break
+    return s
+
+
+_SLUG_INCOMPLETE_FINAL: frozenset[str] = frozenset(
+    {
+        "before",
+        "after",
+        "when",
+        "while",
+        "if",
+        "on",
+        "to",
+        "for",
+        "at",
+        "by",
+        "as",
+        "so",
+        "or",
+        "and",
+        "the",
+        "a",
+        "an",
+        "we",
+        "our",
+        "in",
+    },
+)
+
+
 def _strip_trailing_parenthetical_title(title: str) -> str:
     """Drop a trailing 'Title (qualifier)' for cleaner URLs while keeping display title unchanged."""
     s = (title or "").strip()
@@ -363,7 +428,7 @@ def _strip_trailing_parenthetical_title(title: str) -> str:
     return s[: start - 1].strip() or s
 
 
-def _short_hash_token(key: str, *, n: int = 5) -> str:
+def _short_hash_token(key: str, *, n: int = 7) -> str:
     return hashlib.sha256(key.encode("utf-8")).hexdigest()[:n]
 
 
@@ -377,7 +442,7 @@ _TITLE_PREFIX_BY_POST_TYPE: dict[str, list[str]] = {
     "interview": ["On the record: {t}", "Conversation: {t}", "Inside view: {t}", "Q&A on {t}"],
     "company_news": ["Update: {t}", "Internal note: {t}", "This month: {t}", "Dispatch: {t}"],
     "industry_update": ["Signals on {t}", "Market note: {t}", "Watching: {t}", "Why {t} matters now", "Quick read: {t}"],
-    "guide": ["Reference: {t}", "Blueprint: {t}", "Foundations of {t}", "Plain guide: {t}"],
+    "guide": ["Reference: {t}", "Foundations of {t}", "Plain guide: {t}", "Overview: {t}"],
 }
 
 
@@ -386,7 +451,7 @@ _SLUG_FRAGMENTS_BY_POST_TYPE: dict[str, list[str]] = {
     "case_study": ["outcomes", "constraints", "retrofit", "delivery-story"],
     "comparison": ["tradeoffs", "options", "side-by-side", "criteria"],
     "company_news": ["dispatch", "internal", "rollout", "update"],
-    "guide": ["walkthrough", "manual", "reference", "blueprint"],
+    "guide": ["walkthrough", "manual", "reference", "overview"],
     "checklist": ["prep", "readiness", "audit", "verification"],
     "interview": ["conversation", "q-and-a", "backstage", "studio"],
     "industry_update": ["signals", "landscape", "pulse", "outlook"],
@@ -422,6 +487,84 @@ def _dedupe_adjacent_slug_parts(slug: str) -> str:
     return "-".join(out)
 
 
+_SLUG_BAD_TAIL_TOKENS: frozenset[str] = frozenset(
+    {
+        "constraints",
+        "signals",
+        "quietly",
+        "internal",
+        "dispatch",
+        "the",
+        "a",
+        "an",
+        "we",
+        "our",
+        "from",
+        "keeping",
+        "prep",
+        "update",
+        "shortcuts",
+        "retrofit",
+        "walkthrough",
+        "landscape",
+        "studio",
+        "habits",
+        "criteria",
+        "pulse",
+        "rollout",
+        "risks",
+        "note",
+        "outlook",
+        "watchouts",
+        "without",
+        "or",
+        "readiness",
+        "pitfalls",
+        "options",
+        "workflow",
+        "matters",
+        "now",
+        "park",
+        "outlook",
+        "sequence",
+        "skip",
+    },
+)
+
+
+def _slug_tail_cleanup(s: str) -> str:
+    parts = [p for p in (s or "").strip("-").split("-") if p]
+    while len(parts) > 2 and parts[-1] in _SLUG_BAD_TAIL_TOKENS:
+        parts.pop()
+    while len(parts) > 1 and parts[-1] in _SLUG_INCOMPLETE_FINAL:
+        parts.pop()
+    out = "-".join(parts).strip("-")
+    return out if out else "post"
+
+
+def _title_prefix_candidates(post_type: str, vid: str) -> list[str]:
+    raw = list(_TITLE_PREFIX_BY_POST_TYPE.get(post_type) or [])
+    v = (vid or "").strip()
+    if v in _TRADES_VERTICALS or v == "pest_control":
+        bad = (
+            "blueprint",
+            "case snapshot",
+            "field notes",
+            "field note",
+            "signals on",
+            "internal note",
+            "dispatch:",
+            "walkthrough:",
+            "sequence for",
+            "three paths on",
+            "compared:",
+        )
+        raw = [x for x in raw if not any(b in x.lower() for b in bad)]
+        if not raw:
+            raw = ["Notes: {t}", "On {t}", "Practical view: {t}"]
+    return raw
+
+
 def _blog_post_slug_parts(
     title: str,
     *,
@@ -433,20 +576,33 @@ def _blog_post_slug_parts(
     site_identity: str = "",
 ) -> str:
     vid = (vertical_id or "").strip()
-    prof = vid in _PROF_BLOG_SLUG_VERTICALS
-    base_title = _strip_trailing_parenthetical_title(title)
-    # Professional sites: lean on title slug; trim less aggressively. Others: room for geo + type fragment.
-    core = _slugify_ascii(base_title, max_len=56 if prof else 44)
-    pool = _SLUG_FRAGMENTS_BY_POST_TYPE.get(post_type) or ["notes", "overview", "briefing", "dispatch", "signals"]
+    title_only = vid in _PROF_BLOG_SLUG_VERTICALS or vid in _SLUG_TITLE_ONLY_FIELD_VERTICALS
+    base_title = _strip_trailing_parenthetical_title(_strip_meta_prefix_for_slug(title))
+    # Professional / selected field-service sites: slug from title only — no synthetic post-type fragments in the URL.
+    if title_only:
+        anchor = _slugify_ascii(base_title, max_len=88).strip("-") or "insight"
+        anchor = anchor.replace("how-to", "steps").replace("how_to", "steps")
+        anchor = re.sub(r"-{2,}", "-", anchor).strip("-") or "insight"
+        anchor = _dedupe_adjacent_slug_parts(anchor)
+        anchor = _trim_slug_at_word_boundary(anchor, 82)
+        anchor = _slug_tail_cleanup(anchor)
+        if vid == "pest_control" and site_identity:
+            suf = hashlib.sha256(f"anchor|{site_identity}|{anchor}|{title}".encode()).hexdigest()[:5]
+            anchor = f"{anchor}-{suf}"
+        return anchor
+    # Non-professional: title slug + optional geo + type fragment.
+    core = _slugify_ascii(base_title, max_len=44)
+    pool = list(_SLUG_FRAGMENTS_BY_POST_TYPE.get(post_type) or ["notes", "overview", "briefing", "dispatch", "signals"])
+    if vid == "cleaning":
+        pool = [p for p in pool if p not in ("dispatch", "internal")]
+        if not pool:
+            pool = ["routes", "checklist", "floors", "prep", "windows", "notes"]
     frag = rng.choice(pool)
     geo = ""
-    if not prof:
-        if (district or "").strip() and rng.random() < 0.55:
-            geo = _slugify_ascii(district, max_len=18)
-        elif (city or "").strip() and rng.random() < 0.18:
-            geo = _slugify_ascii(city, max_len=18)
-    elif (city or "").strip() and rng.random() < 0.07:
-        geo = _slugify_ascii(city, max_len=14)
+    if (district or "").strip() and rng.random() < 0.55:
+        geo = _slugify_ascii(district, max_len=18)
+    elif (city or "").strip() and rng.random() < 0.22:
+        geo = _slugify_ascii(city, max_len=18)
     chunk_a = [p for p in (core, frag) if p and p != "post"]
     chunk_b = [p for p in (frag, core) if p and p != "post"]
     ordered = chunk_a if rng.random() < 0.72 else chunk_b
@@ -455,11 +611,12 @@ def _blog_post_slug_parts(
         ordered = ordered[:insert_at] + [geo] + ordered[insert_at:]
     raw = "-".join(ordered) if ordered else frag
     raw = _dedupe_adjacent_slug_parts(raw)
-    anchor = _slugify_ascii(raw, max_len=92 if prof else 88).strip("-") or "insight"
+    anchor = _slugify_ascii(raw, max_len=88).strip("-") or "insight"
     anchor = anchor.replace("how-to", "steps").replace("how_to", "steps")
     anchor = re.sub(r"-{2,}", "-", anchor).strip("-") or "insight"
     anchor = _dedupe_adjacent_slug_parts(anchor)
-    return _trim_slug_at_word_boundary(anchor, 88 if prof else 78)
+    anchor = _trim_slug_at_word_boundary(anchor, 78)
+    return _slug_tail_cleanup(anchor)
 
 
 def _unique_slug_in_set(base: str, seen: set[str], *, max_len: int = 72) -> str:
@@ -469,7 +626,7 @@ def _unique_slug_in_set(base: str, seen: set[str], *, max_len: int = 72) -> str:
     candidate = base
     while candidate in seen:
         n += 1
-        suffix = _short_hash_token(f"{base}|{n}", n=5)
+        suffix = _short_hash_token(f"{base}|{n}")
         candidate = _slugify_ascii(f"{base}-{suffix}", max_len=max_len).strip("-") or suffix
     return candidate
 
@@ -1604,9 +1761,29 @@ def enrich_longform_blog_for_non_news(merged: dict[str, Any], brand: dict[str, A
         except (TypeError, ValueError):
             raw_spot = 5
         n_posts = max(4, min(raw_spot, 10))
+    elif vid == "cafe_restaurant":
+        n_posts = rng.randint(5, 8)
+    elif vid == "cleaning":
+        n_posts = rng.randint(9, 13)
+    elif vid == "legal":
+        n_posts = rng.randint(6, 11)
+    elif vid == "pest_control":
+        n_posts = rng.randint(7, 11)
     else:
         n_posts = rng.choice([15, 16, 18, 20, 22, 24, 25])
-    dates = past_dates_spread(rng, n_posts, brand=brand)
+    _span_days = 0
+    if vid == "cleaning":
+        _span_days = 540
+    elif vid == "legal":
+        _span_days = 620
+    elif vid == "pest_control":
+        _span_days = 520
+    dates = past_dates_spread(
+        rng,
+        n_posts,
+        brand=brand,
+        min_span_days=_span_days,
+    )
 
     if vid == "clothing":
         title_seeds = [
@@ -1641,6 +1818,14 @@ def enrich_longform_blog_for_non_news(merged: dict[str, Any], brand: dict[str, A
             "What changes between lunch and dinner service",
             "Private events: what to expect before you book",
             "Our approach to tipping and service charges",
+            "The one sauce we batch every Sunday",
+            "Interview: the sous chef on pacing a Friday service",
+            "Why we stopped serving that popular dish",
+            "A bread recipe we stole (with permission)",
+            "Fermentation corner: what’s in the jars this month",
+            "How we write a wine note guests actually read",
+            "Brunch vs dinner: two teams, one pass",
+            "Suppliers we’ve kept for five years — and why",
         ]
     elif vid == "fitness":
         title_seeds = [
@@ -1853,31 +2038,56 @@ def enrich_longform_blog_for_non_news(merged: dict[str, Any], brand: dict[str, A
             "How we train junior reporters on sourcing",
             "When we add context notes mid-crisis",
         ]
+    elif vid == "pest_control":
+        title_seeds = [
+            "When ants move indoors after a warm snap",
+            "Commercial kitchens: where roach pressure starts",
+            "Rodent noise in walls — confirming without demo",
+            "Swarmers outside: termites vs. ants at a glance",
+            "Bed bugs after travel — what to inspect first",
+            "Exclusion that survives the next freeze-thaw cycle",
+            "IPM paperwork food auditors actually read",
+            "Perimeter work and pets — how we schedule visits",
+            "Multi-unit notices, re-entry, and shared walls",
+            "Moisture pockets that invite springtails",
+            "Stinging insects: remove, relocate, or monitor",
+            "Pantry moths and bulk storage hygiene",
+            "Spider pressure at thresholds and soffits",
+            "Drain flies when the fix is not more spray",
+            "Garage gaps rodents squeeze through",
+            "New builds: treatment timing vs. move-in",
+            "Tenant turnover: what we verify before the next lease",
+            "Health inspection prep — logs and placements",
+            "Loading docks where pest pressure follows pallets",
+            "Seasonal wasp activity around eaves",
+            "Subterranean termite tubes: when to act fast",
+            "Attic squirrels — humane timing and follow-up",
+            "Bird nesting in signage: options by species",
+        ]
     elif vid in _TRADES_VERTICALS:
         title_seeds = [
-            "First diagnostic: what we actually look at",
-            "Estimates without jargon — what to ask",
-            "Emergency calls: the gap between ring and truck",
-            "Permits and inspections: who owns what",
-            "Floors, booties, and drop cloths — on-site habits",
-            "Warranty work: covered vs. not (plain English)",
-            "Seasonal maintenance most people postpone",
-            "Photos before we touch anything",
-            "Why the truck stocks oddball parts",
-            "Multi-day jobs: how the calendar really works",
-            "Subcontractors: when we call for backup",
-            "Morning safety huddle — what gets said",
-            "Change orders without bad blood",
-            "Prep checklist before we park",
-            "Sign-off tests we won’t skip",
-            "Follow-up visits: included or not?",
-            "Training apprentices without slowing the job",
-            "Efficiency upgrades: trade-offs worth naming",
-            "Older homes: surprises we bake into the quote",
-            "Closeout paperwork you can file as-is",
-            "Why Friday afternoons get weird on the dispatch board",
-            "Three calls, same issue — what that usually means",
-            "Field note: when the second stop eats the first",
+            "What the first hour on site is actually for",
+            "Written estimates: line items that prevent sticker shock",
+            "After-hours calls: how priority and pricing are set",
+            "Permits and inspections: who schedules and who attends",
+            "Protecting finishes while work is in progress",
+            "Warranty vs. wear: how we document the difference",
+            "Maintenance most people defer until failure",
+            "Photo baselines before we change equipment",
+            "Van stock that looks random until you see the route",
+            "Work staged across days without losing continuity",
+            "Bringing in specialists: how handoffs stay clean",
+            "Start-of-day checks before tools go loud",
+            "Add-ons: how scope and price move together",
+            "Site prep: what has to be clear for safe access",
+            "Finishing checks before we sign the job closed",
+            "Training newer crew without slowing the paying visit",
+            "Comfort upgrades: where early numbers help decisions",
+            "Older structures: what we assume is behind the finish",
+            "Closeout docs that match what carriers ask for",
+            "End-of-week scheduling: why slots tighten",
+            "Same symptom on repeat visits: the usual story",
+            "Route days when the second stop changes the first",
         ]
     else:
         title_seeds = [
@@ -1909,7 +2119,11 @@ def enrich_longform_blog_for_non_news(merged: dict[str, Any], brand: dict[str, A
             "Same problem, three teams — how we untangle it",
         ]
     ident_blog = str(brand.get("generation_identity") or merged.get("generation_identity") or brand_name).strip()
-    blog_seed = int(hashlib.sha256(f"blog|{ident_blog}|{vid}".encode("utf-8")).hexdigest(), 16) % (2**32)
+    dom_blog = str(brand.get("domain") or "").strip()
+    blog_seed = int(
+        hashlib.sha256(f"blog|{ident_blog}|{dom_blog}|{vid}|{brand_name}|{city}".encode("utf-8")).hexdigest(),
+        16,
+    ) % (2**32)
     blog_rng = random.Random(blog_seed)
     blog_rng.shuffle(title_seeds)
 
@@ -1992,6 +2206,8 @@ def enrich_longform_blog_for_non_news(merged: dict[str, Any], brand: dict[str, A
             wc = _approx_words_in_sections(sections)
         tl = _blog_topic_for_templates(title, activity=activity)
         fb_vid = "legal" if vid == "consulting" else vid
+        if fb_vid in ("hvac", "plumbing", "electrical", "roofing", "landscaping", "auto_repair", "moving"):
+            fb_vid = "trades_field"
         if fb_vid in ("legal", "consulting", "accounting") and len(tl) > 40:
             tl = "this topic"
         _filler_banks: dict[str, list[str]] = {
@@ -2067,6 +2283,30 @@ def enrich_longform_blog_for_non_news(merged: dict[str, Any], brand: dict[str, A
                 f"Alberta corporate tax instalments intersect with {tl}; model both provincial and federal calendars together.",
                 f"Charity and NPO readers: restricted revenue for {tl} must hit the right fund columns — unrestricted sweeps raise audit flags.",
             ],
+            "pest_control": [
+                f"Entry-point mapping during {tl} matters more than spray volume; gaps above doors defeat perimeter work.",
+                f"Bait stations for {tl} need dated service logs — auditors and landlords ask for them.",
+                f"Interior {tl} visits need pet and occupant notes on file before technicians arrive.",
+                f"Follow-up windows after {tl} are predictable when customers prep kitchens and storage the same way.",
+                f"Exclusion work tied to {tl} should list materials used; warranty calls trace back to that list.",
+                f"Multi-unit {tl} routes batch adjacent suites so re-entry rules stay consistent.",
+                f"Seasonal ant pressure around {tl} shifts with weather — exterior barriers beat reactive interior-only sprays.",
+                f"Documentation photos for {tl} protect both sides when neighbors dispute drift or access.",
+                f"IPM plans for {tl} name thresholds before chemical escalation — that language belongs in the contract.",
+                f"After-hours {tl} emergencies still need SDS and PPE checks; fatigue is when shortcuts appear.",
+            ],
+            "trades_field": [
+                f"Lockout/tagout before {tl} is non-negotiable; shortcuts show up in incident reports, not invoices.",
+                f"Van stock for {tl} should match the top ten failure modes in your market — not a generic parts list.",
+                f"Photo the nameplate when {tl} involves equipment; wrong model numbers waste a return trip.",
+                f"Customer sign-off on {tl} scope prevents 'while you are here' scope creep that burns the route.",
+                f"Weather delays {tl} more than people admit; buffer the second job when the first is outdoors.",
+                f"First-hour diagnostics for {tl} should have a checklist — experienced techs still miss one sensor.",
+                f"Permit packets for {tl} belong in one folder; split PDFs lose pages at inspection.",
+                f"Tool calibration logs for {tl} matter when a warranty vendor asks for proof of proper torque.",
+                f"Drain-down and refill steps for {tl} need written volumes; guessing wastes chemistry and time.",
+                f"End-of-day photos for {tl} jobs close the loop with dispatch faster than verbal handoffs.",
+            ],
             "legal": [
                 f"For {tl}, confirm who signs and who is informed — authority gaps cause delays at filing deadlines.",
                 f"Version control on {tl} drafts matters; courts and tribunals compare iterations when credibility is questioned.",
@@ -2137,6 +2377,10 @@ def enrich_longform_blog_for_non_news(merged: dict[str, Any], brand: dict[str, A
         "mistakes",
         "tips",
     ]
+    if vid == "cleaning":
+        _post_type_pool = [t for t in _post_type_pool if t != "company_news"] + ["industry_update", "tips"]
+    elif vid == "legal":
+        _post_type_pool = [t for t in _post_type_pool if t != "company_news"] + ["guide", "checklist", "tips"]
     rng.shuffle(_post_type_pool)
     zones_brand = brand.get("service_area_zones")
     zone_list_blog = (
@@ -2153,14 +2397,32 @@ def enrich_longform_blog_for_non_news(merged: dict[str, Any], brand: dict[str, A
                 if candidate.lower() not in seen_titles:
                     title = candidate
                     break
-        tpls = _TITLE_PREFIX_BY_POST_TYPE.get(post_type)
-        if tpls and rng.random() < 0.38:
+        tpls = _title_prefix_candidates(post_type, vid)
+        if vid == "legal":
+            _prefix_p = 0.16
+        elif vid in _TRADES_VERTICALS or vid == "pest_control":
+            _prefix_p = 0.12
+        else:
+            _prefix_p = 0.38
+        if tpls and rng.random() < _prefix_p:
             title = rng.choice(tpls).replace("{t}", title)
+        if vid == "legal":
+            lowt = title.lower()
+            if "internal note" in lowt or lowt.startswith("signals on "):
+                title = title_seeds[i % len(title_seeds)].strip()
         seen_titles.add(title.lower())
         category = rng.choice(cats) if cats else "Updates"
-        word_target = rng.choice([1400, 1800, 2200]) if spotlight else rng.choice([400, 800, 1200])
+        if spotlight:
+            word_target = rng.choice([1400, 1800, 2200])
+        elif vid == "legal":
+            word_target = rng.choice([360, 480, 620, 780, 940, 1180, 1420, 1680])
+        elif vid == "pest_control":
+            word_target = rng.choice([380, 520, 680, 850, 1020, 1280, 1580, 1920, 2240])
+        else:
+            word_target = rng.choice([400, 800, 1200])
         district_pick = ""
-        if zone_list_blog and rng.random() < 0.22:
+        _geo_blog_p = 0.09 if vid == "cleaning" else 0.22
+        if zone_list_blog and rng.random() < _geo_blog_p:
             district_pick = rng.choice(zone_list_blog)
         base_anchor = _blog_post_slug_parts(
             title,
@@ -2192,7 +2454,7 @@ def enrich_longform_blog_for_non_news(merged: dict[str, Any], brand: dict[str, A
             "published": True,
         }
 
-        post_register = pick_register(rng)
+        post_register = pick_register_for_blog_post(i, rng)
         chatty = prose_chatty_strength(brand, merged)
         micro_prose = prose_micro_imperfections_enabled(brand, merged)
 
@@ -2506,15 +2768,74 @@ def _careers_copy_family(vertical_id: str) -> str:
     return "office"
 
 
+def _lev_short_strings(a: str, b: str) -> int:
+    if a == b:
+        return 0
+    la, lb = len(a), len(b)
+    if la == 0:
+        return lb
+    if lb == 0:
+        return la
+    prev = list(range(lb + 1))
+    for i, ca in enumerate(a, 1):
+        cur = [i]
+        for j, cb in enumerate(b, 1):
+            cur.append(min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (ca != cb)))
+        prev = cur
+    return prev[-1]
+
+
+def _signature_initial_surname(sig: str) -> tuple[str, str]:
+    parts = sig.strip().split()
+    if len(parts) >= 2:
+        initial = (parts[0].rstrip(".")[:1] or "x").upper()
+        return initial, parts[-1].lower()
+    return "", sig.strip().lower()
+
+
+def _adjacent_testimonial_names_too_close(a: str, b: str) -> bool:
+    i1, s1 = _signature_initial_surname(a)
+    i2, s2 = _signature_initial_surname(b)
+    if not s1 or not s2 or i1 != i2:
+        return False
+    if s1 == s2:
+        return True
+    if len(s1) >= 4 and len(s2) >= 4 and _lev_short_strings(s1, s2) <= 2:
+        return True
+    return False
+
+
+_TESTI_QUOTE_SUFFIX_POOLS: dict[str, tuple[str, ...]] = {
+    "legal": (
+        " Clear expectations on scope and fees helped.",
+        " Written summaries were easy to share with our board.",
+        " We would brief them again on a similar matter.",
+        " Turnaround on drafts matched what we were told at intake.",
+    ),
+    "default": (
+        " Follow-up was quick and practical.",
+        " Communication stayed steady through the job.",
+        " Paper trail was easy to forward internally.",
+        " Timeline matched what we were told up front.",
+        " We would work with them again.",
+    ),
+}
+
+
 def _default_testimonials(
     name: str,
     activity: str,
     vertical_id: str,
     brand: dict[str, Any] | None = None,
+    rng: random.Random | None = None,
 ) -> list[dict[str, Any]]:
     vid = vertical_id.strip()
-    star = "★★★★★"
     sk = site_key_from_brand(brand or {})
+    br = brand or {}
+    trng = rng or random.Random(
+        int.from_bytes(hashlib.sha256(f"{sk}|testimonial|{vid}".encode()).digest()[:8], "big")
+    )
+    suffix_pool = _TESTI_QUOTE_SUFFIX_POOLS.get(vid) or _TESTI_QUOTE_SUFFIX_POOLS["default"]
     if vid == "cafe_restaurant":
         quotes = [
             (f"Consistent plates and calm service — {name} is our default for client dinners.", "M. Patel", "Agency director"),
@@ -2532,8 +2853,8 @@ def _default_testimonials(
             ("Night routes actually finish before our open.", "C. Li", "Retail GM"),
         ]
     elif vid == "fitness":
-        cy = as_of_year(brand)
-        fy_i = founded_year_int(brand)
+        cy = as_of_year(br)
+        fy_i = founded_year_int(br)
         if fy_i is not None:
             msy = max(fy_i, cy - 10)
             if cy > fy_i:
@@ -2622,10 +2943,36 @@ def _default_testimonials(
             ("Scheduling was flexible around our hours; the crew respected the building rules.", "T. Okoro", "Office coordinator"),
             (f"Photos and notes from each visit made it easy to justify renewals on {activity}.", "W. Berg", "Facilities lead"),
         ]
+    country = str(br.get("country") or "").strip() or None
     out: list[dict[str, Any]] = []
     for i, (q, _nm, role) in enumerate(quotes):
-        nm = pick_signature_name(sk, f"testimonial|{vid}|{i}", country=str(brand.get("country") or "").strip() or None)
-        out.append({"quote": q, "name": nm, "role": role, "rating": star})
+        qn = q
+        if trng.random() < 0.36:
+            qn = qn + trng.choice(suffix_pool)
+            if trng.random() < 0.18:
+                qn = qn + trng.choice(suffix_pool)
+        roll = trng.random()
+        if roll < 0.11:
+            star = "★★★☆☆"
+        elif roll < 0.24:
+            star = "★★★★☆"
+        else:
+            star = "★★★★★"
+        nm = pick_signature_name(sk, f"testimonial|{vid}|{i}", country=country)
+        out.append({"quote": qn, "name": nm, "role": role, "rating": star})
+    for j in range(1, len(out)):
+        prev_nm = str(out[j - 1].get("name") or "").strip()
+        cur_nm = str(out[j].get("name") or "").strip()
+        guard = 0
+        while (
+            prev_nm
+            and cur_nm
+            and _adjacent_testimonial_names_too_close(prev_nm, cur_nm)
+            and guard < 28
+        ):
+            guard += 1
+            cur_nm = pick_signature_name(sk, f"testimonial|{vid}|{j}|d{guard}", country=country)
+            out[j]["name"] = cur_nm
     return out
 
 
@@ -2961,17 +3308,22 @@ def _ensure_component_defaults(
     city = str(brand.get("city") or "").strip()
     if not base.get("testimonial_items"):
         base.setdefault("testimonials_heading", "What clients say")
-        base["testimonial_items"] = _default_testimonials(name, activity, vertical_id, brand=brand)
+        base["testimonial_items"] = _default_testimonials(name, activity, vertical_id, brand=brand, rng=rng)
     if not base.get("faq_items"):
         base.setdefault("faq_heading", "Frequently asked questions")
         base["faq_items"] = _default_faq(name, city, vertical_id, rng)
     if not base.get("gallery_items"):
-        base.setdefault("gallery_heading", "Gallery")
-        base["gallery_items"] = [
-            {"caption": "Program kickoff"},
-            {"caption": "Work session"},
-            {"caption": "Launch milestone"},
-        ]
+        _prof_v = frozenset({"legal", "consulting", "medical", "dental", "accounting"})
+        if vertical_id.strip() in _prof_v:
+            base["gallery_heading"] = ""
+            base["gallery_items"] = []
+        else:
+            base.setdefault("gallery_heading", "Gallery")
+            base["gallery_items"] = [
+                {"caption": "Program kickoff"},
+                {"caption": "Work session"},
+                {"caption": "Launch milestone"},
+            ]
     if not (base.get("services_seo_description") or "").strip():
         intro = (base.get("services_intro") or "").strip()
         base["services_seo_description"] = (
@@ -2989,8 +3341,32 @@ def _fake_client_company(rng: random.Random) -> str:
         "SummitRail",
         "BayPoint",
         "OakField",
+        "KiteRock",
+        "SilverMaple",
+        "IronGate",
+        "RedBrick",
+        "ClearFork",
+        "GraniteRow",
+        "HarborLine",
+        "Pinewood",
+        "CopperField",
+        "LakePoint",
+        "BridgeWell",
     ]
-    b = ["Holdings", "Group", "Partners", "Works", "Supply", "Studios", "Clinic", "Properties"]
+    b = [
+        "Holdings",
+        "Group",
+        "Partners",
+        "Works",
+        "Supply",
+        "Studios",
+        "Clinic",
+        "Properties",
+        "Logistics",
+        "Retail",
+        "Foods",
+        "Communities",
+    ]
     return f"{rng.choice(a)} {rng.choice(b)}"
 
 
@@ -3001,10 +3377,11 @@ def _enrich_testimonial_items(merged: dict[str, Any], brand: dict[str, Any], rng
     name_fb = str(brand.get("brand_name") or merged.get("brand_name") or "Brand")
     activity_fb = str(merged.get("activity_summary") or "services")
     vid_fb = str(merged.get("vertical_id") or "").strip()
-    quote_defaults = _default_testimonials(name_fb, activity_fb, vid_fb, brand)
+    quote_defaults = _default_testimonials(name_fb, activity_fb, vid_fb, brand, rng=rng)
     zones = brand.get("service_area_zones")
     zone_list = [str(z) for z in zones] if isinstance(zones, list) else [str(brand.get("city") or "Local area")]
-    styles = ["long", "short", "detail"]
+    styles = ["long", "short", "detail", "micro"]
+    seen_quotes: set[str] = set()
     for i, it in enumerate(items):
         if not isinstance(it, dict):
             continue
@@ -3016,32 +3393,103 @@ def _enrich_testimonial_items(merged: dict[str, Any], brand: dict[str, Any], rng
                 it["quote"] = (
                     f"{name_fb} kept communication clear and delivered solid results on {activity_fb} — we would work with them again."
                 )
+        q_norm = " ".join(str(it.get("quote") or "").split()).strip().lower()[:240]
+        if q_norm and q_norm in seen_quotes and quote_defaults:
+            alt = str(quote_defaults[min(i + 1, len(quote_defaults) - 1)].get("quote") or "").strip()
+            if alt and alt.lower()[:240] != q_norm:
+                it["quote"] = alt
+                q_norm = " ".join(str(it.get("quote") or "").split()).strip().lower()[:240]
+        q_cur = " ".join(str(it.get("quote") or "").split()).strip()
+        pool = _TESTI_QUOTE_SUFFIX_POOLS.get(vid_fb) or _TESTI_QUOTE_SUFFIX_POOLS["default"]
+        if q_cur and len(q_cur) < 400 and rng.random() < 0.44:
+            suf = rng.choice(pool)
+            tail = q_cur[-100:].lower()
+            if suf.strip()[:14].lower() not in tail:
+                q_cur = q_cur + suf
+            if len(q_cur) < 520 and rng.random() < 0.2:
+                suf2 = rng.choice(pool)
+                if suf2 != suf and suf2.strip()[:14].lower() not in q_cur[-120:].lower():
+                    q_cur = q_cur + suf2
+            it["quote"] = q_cur
+            q_norm = " ".join(q_cur.split()).strip().lower()[:240]
+        if q_norm:
+            seen_quotes.add(q_norm)
         if not (it.get("city") or "").strip():
             it["city"] = rng.choice(zone_list)
         try:
             avg_target = float(str(brand.get("review_avg") or "4.5"))
         except ValueError:
             avg_target = 4.5
-        stars_n = min(5, max(1, int(round(avg_target))))
+        roll_st = rng.random()
+        if roll_st < 0.12:
+            stars_n = 3
+        elif roll_st < 0.26:
+            stars_n = 4
+        else:
+            jittered = avg_target + rng.uniform(-0.75, 0.75)
+            stars_n = min(5, max(3, int(round(jittered))))
         it["rating_score"] = stars_n
-        it["rating"] = "★" * stars_n + ("☆" if stars_n < 5 else "")
+        it["rating"] = "★" * stars_n + "☆" * (5 - stars_n)
         it["style"] = rng.choice(styles)
         it["has_photo"] = rng.random() < 0.42
         it.setdefault("photo_src", "")
-        plat = ["Google review", "Google Maps", "Facebook"]
-        it["source_label"] = rng.choice(plat) if rng.random() < 0.88 else ""
+        if vid_fb == "pest_control":
+            plat = [
+                "Google review",
+                "Google Maps",
+                "Facebook",
+                "Nextdoor",
+                "Homeowner referral",
+                "Property manager referral",
+                "",
+            ]
+        elif vid_fb == "cleaning":
+            plat = [
+                "Google review",
+                "Google Maps",
+                "Facebook",
+                "Yelp",
+                "Trusted cleaner referral",
+                "",
+            ]
+        else:
+            plat = ["Google review", "Google Maps", "Facebook", "Yelp", "Neighbor referral", ""]
+        it["source_label"] = rng.choice(plat) if rng.random() < 0.78 else ""
+
+    sk_tm = site_key_from_brand(brand)
+    country_tm = str(brand.get("country") or "").strip() or None
+    for j in range(1, len(items)):
+        prev = items[j - 1]
+        cur = items[j]
+        if not isinstance(prev, dict) or not isinstance(cur, dict):
+            continue
+        n0 = str(prev.get("name") or "").strip()
+        n1 = str(cur.get("name") or "").strip()
+        guard = 0
+        while n0 and n1 and _adjacent_testimonial_names_too_close(n0, n1) and guard < 28:
+            guard += 1
+            n1 = pick_signature_name(sk_tm, f"tstm-adj|{vid_fb}|{j}|{guard}", country=country_tm)
+            cur["name"] = n1
 
 
 def _enrich_hero_footer_trust(merged: dict[str, Any], brand: dict[str, Any], rng: random.Random) -> None:
     """Random trust/rating lines for hero and footer variants that opt into them."""
     ra = brand.get("review_avg")
     rc = brand.get("review_count")
-    show_rating = ra is not None and rc is not None and rng.random() < 0.62
+    pub = brand.get("schema_publish_aggregate_rating", True)
+    show_rating = (
+        pub
+        and ra is not None
+        and rc is not None
+        and rng.random() < 0.62
+    )
     merged["hero_show_rating"] = show_rating
     merged["hero_rating_summary"] = (
         f"{ra}/5 average from {rc}+ local reviews" if show_rating else ""
     )
     bullets: list[str] = []
+    vid_ht = str(merged.get("vertical_id") or "").strip()
+    trade_hero = vid_ht in _TRADES_VERTICALS or vid_ht in ("dental", "medical", "cleaning", "pest_control")
     lic = brand.get("licenses")
     if isinstance(lic, list) and lic and rng.random() < 0.48:
         bullets.append(f"Licensed: {rng.choice(lic)}")
@@ -3051,10 +3499,22 @@ def _enrich_hero_footer_trust(merged: dict[str, Any], brand: dict[str, Any], rng
     ins = str(brand.get("insurance") or "").strip()
     if ins and rng.random() < 0.38:
         bullets.append(ins)
-    if rng.random() < 0.35:
-        bullets.append("Same-day dispatch when slots allow")
-    if rng.random() < 0.28:
-        bullets.append("Written estimates before work begins")
+    if vid_ht == "cafe_restaurant":
+        hw = str(brand.get("hours_weekday") or "").strip()
+        we = str(brand.get("hours_weekend") or "").strip()
+        if hw and rng.random() < 0.55:
+            bullets.append(hw.split("·")[0].strip() if "·" in hw else hw)
+        if we and rng.random() < 0.5:
+            bullets.append(we)
+        if rng.random() < 0.45:
+            bullets.append(rng.choice(["Reservations recommended Fri–Sat", "Walk-ins when tables allow"]))
+        if rng.random() < 0.4:
+            bullets.append(rng.choice(["Seasonal menu updates weekly", "Wine list rotates with the kitchen"]))
+    else:
+        if trade_hero and rng.random() < 0.35:
+            bullets.append("Same-day dispatch when slots allow")
+        if trade_hero and rng.random() < 0.28:
+            bullets.append("Written estimates before work begins")
     rng.shuffle(bullets)
     merged["hero_trust_bullets"] = bullets[:4]
 
@@ -3069,8 +3529,24 @@ def _enrich_hero_footer_trust(merged: dict[str, Any], brand: dict[str, Any], rng
     merged["footer_trust_strip"] = " · ".join(trust_bits[:3]) if trust_bits and rng.random() < 0.55 else ""
 
     tips = merged.get("testimonial_items")
+    bn = str(brand.get("brand_name") or "Site")
     if isinstance(tips, list) and tips and rng.random() < 0.36:
-        first = tips[0]
+        pick: Any = tips[0]
+        if len(tips) > 1:
+            ident_fb = str(brand.get("generation_identity") or merged.get("generation_identity") or bn)
+            foot_h = int(hashlib.sha256(f"footer_rev|{ident_fb}".encode("utf-8")).hexdigest(), 16)
+            idx = 1 + (foot_h % (len(tips) - 1))
+            alt = tips[idx]
+            if isinstance(alt, dict) and isinstance(pick, dict):
+                q0 = str(pick.get("quote") or "").strip()
+                if str(alt.get("quote") or "").strip() != q0:
+                    pick = alt
+                else:
+                    for cand in tips[1:]:
+                        if isinstance(cand, dict) and str(cand.get("quote") or "").strip() != q0:
+                            pick = cand
+                            break
+        first = pick
         if isinstance(first, dict):
             q = str(first.get("quote") or "").strip()
             if len(q) > 150:
@@ -3083,7 +3559,6 @@ def _enrich_hero_footer_trust(merged: dict[str, Any], brand: dict[str, Any], rng
         merged["footer_review_snippet"] = ""
 
     city = str(brand.get("city") or "").strip()
-    bn = str(brand.get("brand_name") or "Site")
     act = str(merged.get("activity_summary") or "services")
     hero_alt_pool = [
         f"{bn} — {city}" if city else bn,
@@ -3176,11 +3651,32 @@ def _build_about_timeline_rows(
             "Added specialty counsel panels for employment and regulatory-heavy files.",
         ]
         open_lab = f"{name} opens — corporate and litigation support with clear retainer and disclosure habits."
-    else:
+    elif vid in ("hvac", "plumbing", "electrical", "roofing"):
+        labels = [
+            "First seasonal tune-up program with documented filter and safety checks.",
+            "Expanded licensed crew coverage and after-hours dispatch for urgent calls.",
+            "Standardized load documentation and warranty handoffs on installs.",
+        ]
+        open_lab = f"{name} opens — licensed field service with clear scopes and written estimates."
+    elif vid == "pest_control":
+        labels = [
+            "First integrated pest management plan with exterior barrier and interior monitoring.",
+            "Added licensed applicators for multi-unit and food-service routes.",
+            "Documented re-treatment windows and customer prep so callbacks stay predictable.",
+        ]
+        open_lab = f"{name} opens — inspection-first pest control with labeled treatment plans."
+    elif vid in ("consulting", "marketing_agency", "real_estate"):
         labels = [
             "First long-term anchor client on retainer.",
-            "Expanded crew and standardized training.",
-            "Reworked routes and sustainability checklist.",
+            "Expanded delivery bench and standardized onboarding for new accounts.",
+            "Reworked proposals and reporting so expectations stay explicit quarter to quarter.",
+        ]
+        open_lab = f"{name} opens for business locally."
+    else:
+        labels = [
+            "First repeat commercial account with a written scope and renewal rhythm.",
+            "Expanded crew and standardized safety and tool checks.",
+            "Reworked routes and job documentation so handoffs stay consistent.",
         ]
         open_lab = f"{name} opens for business locally."
     rows: list[dict[str, str]] = [
@@ -3654,6 +4150,23 @@ _INDUSTRIES_SERVED_POOLS: dict[str, list[tuple[str, str]]] = {
         ("Private equity portcos", "100-day plans, synergy tracking, and integration playbooks that hold under diligence."),
         ("Professional partnerships", "Partner compensation models, practice economics, and governance cadence."),
     ],
+    "pest_control": [
+        ("Food service & hospitality", "Kitchen gaps, dock doors, and dry storage — bait stations and exclusion without disrupting service."),
+        ("Multifamily residential", "Common areas, utility chases, and tenant turnover units with documented treatment notices."),
+        ("Warehousing & logistics", "Loading docks, pallet storage, and perimeter programs where rodents travel along fence lines."),
+        ("Healthcare & clinics", "Low-odor protocols, documentation for facility managers, and schedules that avoid patient hours."),
+        ("Schools & childcare", "Vacation-window treatments, notification templates, and IPM plans auditors can follow."),
+        ("Office & retail", "Perimeter monitoring, discreet interior placements, and follow-ups tied to seasonal pressure."),
+    ],
+    "cafe_restaurant": [
+        ("Small plates & starters", "Shared dishes paced for the table — not a race to the entrée."),
+        ("Mains & grill", "Proteins cooked to temp with sides that change when the market does."),
+        ("Vegetable-forward", "Salads and mains built around what’s crisp this week, not last month’s spec."),
+        ("Pasta & grains", "Handmade or sourced shapes with sauces that reduce overnight, not from a bag."),
+        ("Desserts", "A short list that rotates — pastry picks up where the savory menu leaves off."),
+        ("Wine & NA", "Pairings that respect the check and zero-proof options guests actually finish."),
+        ("Brunch & daytime", "Eggs, baked goods, and coffee service when the room moves at a different speed."),
+    ],
 }
 
 _INDUSTRIES_SERVED_FALLBACK: list[tuple[str, str]] = [
@@ -3673,12 +4186,12 @@ def _industries_served_pool(vertical_id: str) -> list[tuple[str, str]]:
         return list(pool)
     if v in _TRADES_VERTICALS:
         return [
-            ("Commercial facilities", "Access windows, SDS binders, and routes that do not surprise tenants."),
-            ("Residential builders", "Post-construction punch, warranty cleans, and turnover-ready handoffs."),
-            ("Property managers", "Audit-friendly logs, seasonal programs, and escalation when scopes drift."),
-            ("Retail & food service", "Opening-hour constraints, glass and high-touch standards, and odor control."),
-            ("Logistics & warehousing", "Dock schedules, spill protocols, and floors that take equipment traffic."),
-            ("Municipal & institutional", "Bid discipline, background checks, and documentation procurement expects."),
+            ("Commercial facilities", "Scheduled access, documented applications, and routes that do not surprise tenants."),
+            ("Residential builders", "Pre-occupancy treatments, warranty callbacks, and handoff notes for property managers."),
+            ("Property managers", "Service logs, seasonal perimeter work, and escalation when activity spikes between visits."),
+            ("Retail & logistics", "Dock and receiving doors, storage rooms, and exterior bait stations along loading lanes."),
+            ("Light industrial", "Footprint mapping, exterior pressure points, and follow-ups after weather shifts."),
+            ("Institutional sites", "Bid discipline, background checks, and paperwork procurement expects."),
         ]
     return list(_INDUSTRIES_SERVED_FALLBACK)
 
@@ -3895,6 +4408,49 @@ def _enrich_extended_site_content(merged: dict[str, Any], brand: dict[str, Any],
                 ),
             },
         ]
+    elif vid_x == "cafe_restaurant":
+        merged["usp_heading"] = rng.choice(
+            ["Why people come back", "What the room feels like", "The usual reasons guests stay"],
+        )
+        loc_r = city or "the neighborhood"
+        merged["usp_items"] = [
+            {
+                "title": "Seasonal menu rhythm",
+                "text": rng.choice(
+                    [
+                        "We shorten the card when produce peaks, then widen it when suppliers stabilize.",
+                        "Specials land when ingredients make sense — not to fill a content calendar.",
+                    ],
+                ),
+            },
+            {
+                "title": "Kitchen and floor in sync",
+                "text": rng.choice(
+                    [
+                        "Pacing is set so the kitchen can cook to standard when the room is full.",
+                        "FOH signals when tables need air; the pass doesn’t guess.",
+                    ],
+                ),
+            },
+            {
+                "title": "A room you can hear yourself in",
+                "text": rng.choice(
+                    [
+                        "Music and seating tuned for conversation — still lively on Saturday.",
+                        "Lighting and spacing aimed at comfort, not just turning covers.",
+                    ],
+                ),
+            },
+            {
+                "title": "Reservations without the runaround",
+                "text": rng.choice(
+                    [
+                        f"We hold tables for locals who plan ahead — walk-ins when space allows ({loc_r}).",
+                        "Clear policy on holds and late arrivals so the night stays fair for everyone.",
+                    ],
+                ),
+            },
+        ]
     else:
         if vid_x in ("marketing_agency", "consulting"):
             own_line = rng.choice(
@@ -4015,17 +4571,77 @@ def _enrich_extended_site_content(merged: dict[str, Any], brand: dict[str, Any],
     n_steps = rng.randint(3, min(5, len(_proc_steps)))
     start = rng.randint(0, len(_proc_steps) - n_steps)
     merged["process_preview_steps"] = _proc_steps[start : start + n_steps]
-    merged["service_area_list_heading"] = "Areas we cover"
-    merged["service_area_list_intro"] = (
-        f"We regularly serve clients across these neighborhoods{f' near {city}' if city else ''}."
-    )
-    hub_rows: list[dict[str, str]] = []
-    for z in zone_list or ([city] if city else ["Metro core"]):
-        zs = _slugify_ascii(z, max_len=48)
-        hub_rows.append({"label": z, "href": f"service-area-{zs}.php"})
-    merged["service_area_links"] = hub_rows
+    _cta_href = str(merged.get("hero_cta_href") or "contact.php").strip()
+    _contact_href = _cta_href if _cta_href.lower().startswith("contact") else "contact.php"
+    if vid_x == "cafe_restaurant":
+        merged["service_area_list_heading"] = rng.choice(
+            ["Visit us", "Hours & location", "Find us", "One address"],
+        )
+        merged["service_area_list_intro"] = rng.choice(
+            [
+                f"One dining room in {city} — parking, transit, and hours are on the contact page.",
+                f"We’re a single location{f' in {city}' if city else ''}; no franchise map or dispatch zones.",
+                "Directions, reservations, and accessibility notes live next to our phone and email.",
+            ],
+        )
+        merged["service_area_links"] = [
+            {
+                "label": rng.choice(["Contact & directions", "Hours & map", "Visit & reserve"]),
+                "href": _contact_href,
+            },
+        ]
+    elif vid_x in _PROF_OFFICE_VERTICALS:
+        merged["service_area_list_heading"] = rng.choice(
+            ["Offices & jurisdictions", "Where we work", "How to reach us", "Locations"],
+        )
+        merged["service_area_list_intro"] = rng.choice(
+            [
+                f"Reach {name} through the contact page{f' — we’re based in {city}' if city else ''}; we do not maintain neighborhood SEO landing pages.",
+                "Directions, intake channels, and scheduling live on the contact page — one front door for new matters.",
+                f"New client inquiries run through a single intake path{f' for {city}' if city else ''}; no separate ‘area’ microsites.",
+            ],
+        )
+        merged["service_area_links"] = [
+            {
+                "label": rng.choice(["Contact & intake", "Reach the office", "Schedule a call"]),
+                "href": _contact_href,
+            },
+        ]
+    else:
+        merged["service_area_list_heading"] = "Areas we cover"
+        merged["service_area_list_intro"] = (
+            f"We regularly serve clients across these neighborhoods{f' near {city}' if city else ''}."
+        )
+        hub_rows: list[dict[str, str]] = []
+        for z in zone_list or ([city] if city else ["Metro core"]):
+            zs = _slugify_ascii(z, max_len=48)
+            hub_rows.append({"label": z, "href": f"service-area-{zs}.php"})
+        merged["service_area_links"] = hub_rows
     merged["clients_heading"] = "Organizations that rely on us"
-    merged["client_logos"] = [{"name": _fake_client_company(rng)} for _ in range(rng.randint(4, 8))]
+    _n_pool = rng.randint(6, 8)
+    _site_clients: list[str] = []
+    _seen_c: set[str] = set()
+    _prefix_used: set[str] = set()
+    _guard = 0
+    while len(_site_clients) < _n_pool and _guard < 200:
+        _guard += 1
+        _cand = _fake_client_company(rng)
+        _first = (_cand.split()[0] or "").lower()
+        if _cand in _seen_c:
+            continue
+        if _first in _prefix_used:
+            continue
+        _seen_c.add(_cand)
+        _prefix_used.add(_first)
+        _site_clients.append(_cand)
+    while len(_site_clients) < _n_pool:
+        _cand = _fake_client_company(rng)
+        if _cand not in _seen_c:
+            _seen_c.add(_cand)
+            _site_clients.append(_cand)
+    merged["site_client_names"] = list(_site_clients)
+    _nk = rng.randint(4, min(8, len(_site_clients)))
+    merged["client_logos"] = [{"name": _site_clients[i]} for i in range(_nk)]
     vid_proc = str(merged.get("vertical_id") or "").strip()
     ph, pi, ptiers = _pricing_page_and_tiers(vid_proc, activity, rng, ctry)
     merged["pricing_page_header"] = ph
@@ -4035,110 +4651,228 @@ def _enrich_extended_site_content(merged: dict[str, Any], brand: dict[str, Any],
     merged["process_page_header"] = "Our process, end to end"
     merged["process_page_intro"] = _process_page_intro_for_vertical(vid_proc, activity)
     merged["process_steps_items"] = _process_steps_for_vertical(vid_proc)
-    merged["portfolio_page_header"] = "Recent work"
-    merged["portfolio_page_intro"] = f"A sample of {activity} projects we can share publicly."
-    merged["portfolio_items"] = []
-    for idx in range(4):
-        merged["portfolio_items"].append(
-            {
-                "title": rng.choice(
-                    ["Interior refresh", "Seasonal program", "Full build-out", "Rapid turnaround", "Multi-site"],
-                ),
-                "summary": rng.choice(
-                    [
-                        "Delivered on schedule with weekly check-ins and clear documentation.",
-                        "Weekly photos and written sign-offs kept stakeholders aligned without extra meetings.",
-                        "Scope held steady; changes stayed rare and always written.",
-                        "Milestones matched the plan auditors saw — not a retrofitted timeline.",
-                    ],
-                ),
-                "image_src": f"img/portfolio/p-{idx + 1:02d}.jpg",
-            },
+    if vid_proc in _PROF_OFFICE_VERTICALS:
+        merged["portfolio_page_header"] = "Representative matters"
+        merged["portfolio_page_intro"] = (
+            f"Illustrative engagements consistent with how {name} practices — identifiers anonymized where required."
         )
+        merged["portfolio_items"] = []
+        for _pi in range(rng.randint(2, 3)):
+            merged["portfolio_items"].append(
+                {
+                    "title": rng.choice(
+                        [
+                            "Commercial contract advisory",
+                            "Regulatory response and filings",
+                            "Transaction support under time pressure",
+                            "Governance memo for the board",
+                            "Workforce policy refresh",
+                        ],
+                    ),
+                    "summary": rng.choice(
+                        [
+                            "Scoped issues early, aligned on written assumptions, and kept spend tied to outcomes.",
+                            "Delivered board-ready documentation within the review window the client set.",
+                            "Reduced escalation risk by agreeing documentation standards with counterpart counsel.",
+                            "Mapped obligations across jurisdictions before signatures, not after a surprise request.",
+                        ],
+                    ),
+                    "image_src": "",
+                },
+            )
+    else:
+        merged["portfolio_page_header"] = "Recent work"
+        merged["portfolio_page_intro"] = f"A sample of {activity} projects we can share publicly."
+        merged["portfolio_items"] = []
+        for idx in range(4):
+            merged["portfolio_items"].append(
+                {
+                    "title": rng.choice(
+                        ["Interior refresh", "Seasonal program", "Full build-out", "Rapid turnaround", "Multi-site"],
+                    ),
+                    "summary": rng.choice(
+                        [
+                            "Delivered on schedule with weekly check-ins and clear documentation.",
+                            "Weekly photos and written sign-offs kept stakeholders aligned without extra meetings.",
+                            "Scope held steady; changes stayed rare and always written.",
+                            "Milestones matched the plan auditors saw — not a retrofitted timeline.",
+                        ],
+                    ),
+                    "image_src": f"img/portfolio/p-{idx + 1:02d}.jpg",
+                },
+            )
     merged["case_studies_page_header"] = "Case studies"
     merged["case_studies_page_intro"] = "Challenges, constraints, and what changed after we got involved."
     n_cs = rng.randint(2, 4)
     merged["case_studies"] = []
     seen_case_slugs: set[str] = set()
     activity_slug = _slugify_ascii(activity, max_len=24) or "engagement"
+    _clients_pool: list[str] = list(merged.get("site_client_names") or [])
     for _k in range(n_cs):
         district = rng.choice(zone_list) if zone_list else (city or "metro-core")
         dslug = _slugify_ascii(district, max_len=28) or "local"
-        proj_seed = rng.choice(
-            [
-                f"{activity_slug}-rollout",
-                f"{activity_slug}-retrofit",
-                f"{activity_slug}-program",
-                f"{activity_slug}-restoration",
-                f"multi-phase-{activity_slug}",
-                f"urgent-{activity_slug}",
-            ],
-        )
-        base_cs = _slugify_ascii(f"{proj_seed}-{dslug}", max_len=48).strip("-") or f"project-{dslug}"
-        slug = _unique_slug_in_set(base_cs, seen_case_slugs, max_len=52)
-        seen_case_slugs.add(slug)
-        client = _fake_client_company(rng)
-        client_type_lbl = rng.choice(
-            ["Commercial", "Industrial", "Multi-family residential", "Municipal", "Private residential"],
-        )
-        duration_lbl = rng.choice(
-            [
-                "72-hour emergency stabilization",
-                "10-day mobilization",
-                "6-week phased program",
-                "Seasonal maintenance cycle",
-                "4-month capital rollout",
-            ],
-        )
-        project_title = rng.choice(
-            [
-                "Mechanical retrofit without a full shutdown",
-                "Rooftop reliability after repeat failures",
-                "Controls upgrade with documented commissioning",
-                "Capacity expansion ahead of lease renewal",
-                "Seasonal readiness under audit pressure",
-            ],
-        )
-        cs_summary = rng.choice(
-            [
-                (
-                    f"A {activity} engagement in {district} for a {client_type_lbl.lower()} client — "
-                    f"{duration_lbl.lower()}, documented handoffs, and measurable outcomes."
-                ),
-                (
-                    f"Three similar requests stacked around {district} one busy season; {name} sequenced crews "
-                    f"so nobody lost their access window — {duration_lbl.lower()} end to end."
-                ),
-                (
-                    f"{client_type_lbl} operations in {district} needed {activity} without pausing the floor — "
-                    f"{duration_lbl.lower()}, with paperwork the facilities lead could file as-is."
-                ),
-            ],
-        )
-        chal = rng.choice(
-            [
-                (
-                    f"The {client_type_lbl.lower()} client needed reliable {activity} coverage in {district} "
-                    "without shutting down daily operations or breaking compliance trails."
-                ),
-                (
-                    f"Traffic patterns and loading rules in {district} made same-day heroics unrealistic; "
-                    f"the {client_type_lbl.lower()} client still needed predictable {activity} coverage."
-                ),
-            ],
-        )
-        sol = rng.choice(
-            [
-                (
-                    f"{name} staged work in windows that matched their traffic patterns, "
-                    "assigned a single operations lead, and logged verification steps the facilities team could audit."
-                ),
-                (
-                    f"{name} matched shifts to quiet hours in {district}, named one operations lead, "
-                    "and photographed checkpoints the client could drop into their own QA binder."
-                ),
-            ],
-        )
+        if vid_proc in _PROF_OFFICE_VERTICALS:
+            proj_seed = rng.choice(
+                [
+                    f"matter-{activity_slug}",
+                    f"advisory-{activity_slug}",
+                    f"engagement-{activity_slug}",
+                    f"retainer-{activity_slug}",
+                ],
+            )
+            base_cs = _slugify_ascii(f"{proj_seed}-{dslug}", max_len=48).strip("-") or f"matter-{dslug}"
+            slug = _unique_slug_in_set(base_cs, seen_case_slugs, max_len=52)
+            seen_case_slugs.add(slug)
+            client = rng.choice(_clients_pool) if _clients_pool else _fake_client_company(rng)
+            client_type_lbl = rng.choice(
+                [
+                    "Regulated employer",
+                    "Family-owned business",
+                    "Professional partnership",
+                    "Not-for-profit board",
+                    "Growth-stage company",
+                ],
+            )
+            duration_lbl = rng.choice(
+                [
+                    "12-week advisory window",
+                    "90-day remediation plan",
+                    "Six-month retainer cycle",
+                    "Quarterly board cadence",
+                    "Eight-week diligence sprint",
+                ],
+            )
+            project_title = rng.choice(
+                [
+                    "Governance cleanup before a capital raise",
+                    "Contract dispute containment without trial",
+                    "Policy refresh after regulatory guidance shifted",
+                    "Cross-border setup with cautious pacing",
+                    "Workforce restructure with defensible documentation",
+                ],
+            )
+            cs_summary = rng.choice(
+                [
+                    (
+                        f"{name} supported a {client_type_lbl.lower()} client in {district} — "
+                        f"{duration_lbl.lower()} with written scope, risk notes, and clear decision points."
+                    ),
+                    (
+                        f"A {activity} matter in {district}: {duration_lbl.lower()}, "
+                        "single relationship partner, and documentation the board could rely on."
+                    ),
+                ],
+            )
+            chal = rng.choice(
+                [
+                    (
+                        f"The {client_type_lbl.lower()} client faced overlapping deadlines in {district} "
+                        "and needed advice that could move without burying judgment in email threads."
+                    ),
+                    (
+                        "Counterpart counsel pressed for fast signatures; internal stakeholders still needed "
+                        "plain-language risk framing before committing."
+                    ),
+                ],
+            )
+            sol = rng.choice(
+                [
+                    (
+                        f"{name} issued short, dated risk memos, staged sign-offs against a written checklist, "
+                        "and kept one lead attorney accountable for scope."
+                    ),
+                    (
+                        f"{name} aligned the client team on assumptions first, then drafted against those assumptions "
+                        f"so review cycles in {district} stayed predictable."
+                    ),
+                ],
+            )
+            results_html = (
+                "<ul><li>Scoped contentious issues early so spend tracked to outcomes, not motion practice.</li>"
+                "<li>Delivered board-ready documentation inside the agreed review window.</li>"
+                "<li>Reduced escalation risk by documenting advice where the client could find it later.</li></ul>"
+            )
+        else:
+            proj_seed = rng.choice(
+                [
+                    f"{activity_slug}-rollout",
+                    f"{activity_slug}-retrofit",
+                    f"{activity_slug}-program",
+                    f"{activity_slug}-restoration",
+                    f"multi-phase-{activity_slug}",
+                    f"urgent-{activity_slug}",
+                ],
+            )
+            base_cs = _slugify_ascii(f"{proj_seed}-{dslug}", max_len=48).strip("-") or f"project-{dslug}"
+            slug = _unique_slug_in_set(base_cs, seen_case_slugs, max_len=52)
+            seen_case_slugs.add(slug)
+            client = rng.choice(_clients_pool) if _clients_pool else _fake_client_company(rng)
+            client_type_lbl = rng.choice(
+                ["Commercial", "Industrial", "Multi-family residential", "Municipal", "Private residential"],
+            )
+            duration_lbl = rng.choice(
+                [
+                    "72-hour emergency stabilization",
+                    "10-day mobilization",
+                    "6-week phased program",
+                    "Seasonal maintenance cycle",
+                    "4-month capital rollout",
+                ],
+            )
+            project_title = rng.choice(
+                [
+                    "Mechanical retrofit without a full shutdown",
+                    "Rooftop reliability after repeat failures",
+                    "Controls upgrade with documented commissioning",
+                    "Capacity expansion ahead of lease renewal",
+                    "Seasonal readiness under audit pressure",
+                ],
+            )
+            cs_summary = rng.choice(
+                [
+                    (
+                        f"A {activity} engagement in {district} for a {client_type_lbl.lower()} client — "
+                        f"{duration_lbl.lower()}, documented handoffs, and measurable outcomes."
+                    ),
+                    (
+                        f"Three similar requests stacked around {district} one busy season; {name} sequenced crews "
+                        f"so nobody lost their access window — {duration_lbl.lower()} end to end."
+                    ),
+                    (
+                        f"{client_type_lbl} operations in {district} needed {activity} without pausing the floor — "
+                        f"{duration_lbl.lower()}, with paperwork the facilities lead could file as-is."
+                    ),
+                ],
+            )
+            chal = rng.choice(
+                [
+                    (
+                        f"The {client_type_lbl.lower()} client needed reliable {activity} coverage in {district} "
+                        "without shutting down daily operations or breaking compliance trails."
+                    ),
+                    (
+                        f"Traffic patterns and loading rules in {district} made same-day heroics unrealistic; "
+                        f"the {client_type_lbl.lower()} client still needed predictable {activity} coverage."
+                    ),
+                ],
+            )
+            sol = rng.choice(
+                [
+                    (
+                        f"{name} staged work in windows that matched their traffic patterns, "
+                        "assigned a single operations lead, and logged verification steps the facilities team could audit."
+                    ),
+                    (
+                        f"{name} matched shifts to quiet hours in {district}, named one operations lead, "
+                        "and photographed checkpoints the client could drop into their own QA binder."
+                    ),
+                ],
+            )
+            results_html = (
+                "<ul><li>Cut repeat scheduling conflicts by roughly 40% in the first quarter.</li>"
+                "<li>Passed internal QA checks with zero major findings on the last two walkthroughs.</li>"
+                "<li>Maintained the same crew lead for continuity.</li></ul>"
+            )
         merged["case_studies"].append(
             {
                 "slug": slug,
@@ -4151,11 +4885,7 @@ def _enrich_extended_site_content(merged: dict[str, Any], brand: dict[str, Any],
                 "client_label": client,
                 "challenge": chal,
                 "solution": sol,
-                "results_html": (
-                    "<ul><li>Cut repeat scheduling conflicts by roughly 40% in the first quarter.</li>"
-                    "<li>Passed internal QA checks with zero major findings on the last two walkthroughs.</li>"
-                    "<li>Maintained the same crew lead for continuity.</li></ul>"
-                ),
+                "results_html": results_html,
             },
         )
     merged["careers_page_header"] = "Careers"
@@ -4240,16 +4970,39 @@ def _enrich_extended_site_content(merged: dict[str, Any], brand: dict[str, Any],
                 ),
             },
         )
-    merged["industries_page_header"] = "Industries we serve"
     vid_ind = str(merged.get("vertical_id") or "").strip()
-    if vid_ind == "accounting":
-        merged["industries_page_intro"] = (
-            "Alberta and federal filing rules shift by industry — we keep sector-specific checklists so nothing ships late."
+    if vid_ind == "cafe_restaurant":
+        merged["industries_page_header"] = rng.choice(
+            ["Menu", "What we’re cooking", "The menu", "Food & drink"],
         )
-    elif vid_ind == "legal":
-        merged["industries_page_intro"] = "We match counsel depth to sector risk — same rigor, different fact patterns."
+        merged["industries_page_intro"] = rng.choice(
+            [
+                f"Seasonal picks and staples — the kitchen shortens the card when produce peaks, then opens it back up.",
+                f"Dishes we can execute consistently on a Friday night, with room for weekly specials.",
+                f"Same room, shifting plates: winter roots, summer herbs, and the sauces that tie it together.",
+            ],
+        )
     else:
-        merged["industries_page_intro"] = "We adapt playbooks by sector while keeping the same accountability model."
+        merged["industries_page_header"] = "Industries we serve"
+        if vid_ind == "accounting":
+            merged["industries_page_intro"] = (
+                "Alberta and federal filing rules shift by industry — we keep sector-specific checklists so nothing ships late."
+            )
+        elif vid_ind == "legal":
+            merged["industries_page_intro"] = "We match counsel depth to sector risk — same rigor, different fact patterns."
+        elif vid_ind == "pest_control":
+            merged["industries_page_header"] = rng.choice(
+                ["Markets we serve", "Who we work with", "Property types & programs"],
+            )
+            merged["industries_page_intro"] = rng.choice(
+                [
+                    "Different buildings mean different pest pressure — we tune monitoring, products, and visit cadence to the site.",
+                    "Kitchens, warehouses, and multifamily sites each get a plan that matches how people move through the space.",
+                    "We group clients by risk profile and seasonality so technicians arrive with the right tools and paperwork.",
+                ],
+            )
+        else:
+            merged["industries_page_intro"] = "We adapt playbooks by sector while keeping the same accountability model."
     ind_pool = _industries_served_pool(vid_ind)
     rng.shuffle(ind_pool)
     hi = min(6, len(ind_pool))
@@ -4263,10 +5016,22 @@ def _enrich_extended_site_content(merged: dict[str, Any], brand: dict[str, Any],
     )
     srcs = _pick_sources(rng, str(merged.get("vertical_id") or ""), 6)
     merged["resource_links"] = [{"title": s["title"], "url": s["url"], "note": s["org"]} for s in srcs]
-    merged["service_areas_page_header"] = "Service areas"
-    merged["service_areas_page_intro"] = (
-        f"Local routes and crews organized around {city or 'core neighborhoods'} — tap a district for more detail."
-    )
+    if vid_ind == "cafe_restaurant":
+        merged["service_areas_page_header"] = rng.choice(
+            ["Visit us", "Location & hours", "Find the dining room"],
+        )
+        merged["service_areas_page_intro"] = rng.choice(
+            [
+                f"One address in {city or 'town'} — parking, transit, and reservations on the contact page.",
+                "We’re a single dining room, not a service map. Directions and hours live with our phone number.",
+                "No district landing pages — just the restaurant, the hours, and how to book.",
+            ],
+        )
+    else:
+        merged["service_areas_page_header"] = "Service areas"
+        merged["service_areas_page_intro"] = (
+            f"Local routes and crews organized around {city or 'core neighborhoods'} — tap a district for more detail."
+        )
     merged.setdefault(
         "mission_statement",
         f"{name} exists to make {activity} predictable for the people responsible for outcomes.",
@@ -4499,6 +5264,8 @@ def fill_content(
     _ensure_team_items(merged, name, vid_key, brand, rng)
     _append_about_paragraphs(merged, vid_key, rng, brand)
     _prepend_local_story(merged, brand, name, rng)
+    merged["about_body"] = _dedupe_similar_sentences(str(merged.get("about_body") or ""))
+    _ensure_hero_distinct_from_about(merged, rng)
     _ensure_blog_and_faq_pages(merged, name, activity, rng, vid_key, brand)
     if vid_key == "news":
         enrich_news_vertical_content(merged, brand, rng)
@@ -4507,7 +5274,13 @@ def fill_content(
     if vid_key == "clothing" and not merged.get("products"):
         # Minimal storefront catalog so "clothing" doesn't look like a brochure.
         brand_name = str(brand.get("brand_name") or name)
-        shop_ccy = "EUR" if str(brand.get("country") or "").strip() == "Ireland" else "USD"
+        ctry = str(brand.get("country") or "").strip()
+        if ctry == "Ireland":
+            shop_ccy = "EUR"
+        elif ctry == "Canada":
+            shop_ccy = "CAD"
+        else:
+            shop_ccy = "USD"
         drops = [
             ("Washed tee", "Cotton jersey", ["XS", "S", "M", "L", "XL"], 36),
             ("Rib tank", "Cotton rib", ["XS", "S", "M", "L"], 28),
@@ -4568,6 +5341,12 @@ def fill_content(
         vid_key,
         brand=brand,
     )
+    if vid_key == "cafe_restaurant":
+        hparts = [
+            str(brand.get("hours_weekday") or "").strip(),
+            str(brand.get("hours_weekend") or "").strip(),
+        ]
+        merged["hours_display"] = " · ".join(p for p in hparts if p)
     return merged
 
 
@@ -5084,6 +5863,77 @@ def _hero_cta_for_vertical(vertical_id: str, rng: random.Random) -> tuple[str, s
     return rng.choice(opts), "contact.php"
 
 
+_HERO_FALLBACK_GENERIC: tuple[str, ...] = (
+    "Clear scope, named owners, and dates you can plan around — without the usual runaround.",
+    "We document assumptions up front so delivery does not depend on hallway agreements.",
+    "If timelines slip, you hear from the person who owns the task — not a generic inbox.",
+)
+
+_HERO_FALLBACK_BY_VERTICAL: dict[str, tuple[str, ...]] = {
+    "pest_control": (
+        "Licensed inspections, species-specific treatments, and prevention plans that close entry points — not just spray-and-go.",
+        "Targeted interior and exterior programs with written re-entry timing and product notes you can file.",
+        "Integrated pest management: identify first, treat where it matters, then monitor so problems do not bounce back.",
+    ),
+    "cleaning": (
+        "Route-based crews, written scopes, and checklists your facility manager can audit without shadowing every visit.",
+        "We standardize chemistry and touch-points so quality stays predictable when staff or buildings change.",
+    ),
+}
+
+
+def _ensure_hero_distinct_from_about(merged: dict[str, Any], rng: random.Random) -> None:
+    hero = str(merged.get("hero_subtitle") or "").strip()
+    about = str(merged.get("about_body") or "").strip()
+    if len(hero) < 28 or len(about) < 45:
+        return
+    h_norm = " ".join(hero.split()).lower()[:240]
+    a_norm = " ".join(about.split()).lower()
+    if h_norm and h_norm in a_norm:
+        vid = str(merged.get("vertical_id") or "").strip()
+        pool = _HERO_FALLBACK_BY_VERTICAL.get(vid) or _HERO_FALLBACK_GENERIC
+        merged["hero_subtitle"] = rng.choice(pool)
+        return
+    hw = set(re.sub(r"[^a-z0-9]+", " ", h_norm).split())
+    aw = set(re.sub(r"[^a-z0-9]+", " ", a_norm[:480]).split())
+    if len(hw) >= 12 and len(aw) >= 12:
+        inter = len(hw & aw)
+        if inter / max(1, len(hw)) >= 0.52:
+            vid = str(merged.get("vertical_id") or "").strip()
+            pool = _HERO_FALLBACK_BY_VERTICAL.get(vid) or _HERO_FALLBACK_GENERIC
+            merged["hero_subtitle"] = rng.choice(pool)
+
+
+def _dedupe_similar_sentences(body: str, *, sim: float = 0.82) -> str:
+    """Drop consecutive-style duplicate thoughts (high word overlap) from about/lead text."""
+    s = (body or "").strip()
+    if len(s) < 50:
+        return s
+    parts = re.split(r"(?<=[.!?])\s+", s)
+    out: list[str] = []
+    for pt in parts:
+        p = pt.strip()
+        if not p:
+            continue
+        w = set(re.sub(r"[^a-z0-9]+", " ", p.lower()).split())
+        if len(w) < 6:
+            out.append(p)
+            continue
+        drop = False
+        for prev in out:
+            pw = set(re.sub(r"[^a-z0-9]+", " ", prev.lower()).split())
+            if len(pw) < 6:
+                continue
+            inter = len(w & pw)
+            ratio = inter / max(1, min(len(w), len(pw)))
+            if ratio >= sim:
+                drop = True
+                break
+        if not drop:
+            out.append(p)
+    return " ".join(out).strip()
+
+
 def _prepend_local_story(merged: dict[str, Any], brand: dict[str, Any], name: str, rng: random.Random) -> None:
     city = str(brand.get("city") or "").strip()
     fy = brand.get("founded_year")
@@ -5110,12 +5960,22 @@ def _prepend_local_story(merged: dict[str, Any], brand: dict[str, Any], name: st
         f"Our {city} base{reg} dates to {fy} — long enough to see what repeats every season and what doesn’t. ",
         f"What started in {fy} as a small {city} crew is now the same group answering the phone and the inbox. ",
     ]
-    scene_leads = [
-        f"The phone still rings early on Mondays in {city} — same habit {name} built its roster around. ",
-        f"Walk past {name} on a Thursday in {city} and you’ll still see checklists, not improvisation, behind the counter. ",
-        f"In {city}, the first message of the day is rarely glamorous; {name} answers it anyway — that’s the job. ",
-        f"Seasons change in {city}; the through-line at {name} is the same crew learning what repeats and what doesn’t. ",
-    ]
+    vid_loc = str(merged.get("vertical_id") or "").strip()
+    trades_scene = vid_loc in _TRADES_VERTICALS or vid_loc in ("cleaning", "pest_control")
+    if trades_scene:
+        scene_leads = [
+            f"The phone still rings early on Mondays in {city} — dispatch still runs off written scopes, not memory. ",
+            f"In {city}, {name} still rolls trucks with checklists tied to the address — not a one-line text and a guess. ",
+            f"Seasons shift pest pressure in {city}; {name} adjusts perimeter work instead of repeating last month’s map. ",
+            f"First call of the day in {city} is usually routing and timing — {name} answers it like operations, not sales theatre. ",
+        ]
+    else:
+        scene_leads = [
+            f"The phone still rings early on Mondays in {city} — same habit {name} built its roster around. ",
+            f"Walk past {name} on a Thursday in {city} and you’ll still see checklists, not improvisation, behind the counter. ",
+            f"In {city}, the first message of the day is rarely glamorous; {name} answers it anyway — that’s the job. ",
+            f"Seasons change in {city}; the through-line at {name} is the same crew learning what repeats and what doesn’t. ",
+        ]
     lead = rng.choice(scene_leads if rng.random() < 0.44 else leads)
     if lead.rstrip() in body:
         return
@@ -5129,6 +5989,13 @@ _ABOUT_EXTRA_POOLS: dict[str, list[str]] = {
         "Wine and non-alc lists get trimmed together so pairings stay honest when the room is full.",
         "The pastry window doubles as a prep checkpoint: if it looks tired, it doesn’t hit the pass.",
         "Local suppliers get a standing quarterly review — not because we love meetings, because menus drift otherwise.",
+    ],
+    "pest_control": [
+        "Technicians photo-map harborage before treatment so the next visit targets the same gaps, not a fresh guess.",
+        "Product choices follow label directions and your sector’s rules — kitchens, schools, and clinics get different defaults.",
+        "Exclusion notes go to maintenance with dates so small gaps do not reopen between quarterly visits.",
+        "Emergency calls get a capped response window and a written plan before we apply anything indoors.",
+        "Seasonal pressure (ants in spring, rodents in fall) is built into the calendar — not a surprise upsell mid-year.",
     ],
     "cleaning": [
         "Crew leads work from checklists matched to your building class, with SDS binders and insurance paperwork ready for audits.",
@@ -5209,6 +6076,12 @@ _ABOUT_SHORT_SNIPPETS: dict[str, list[str]] = {
         "Menus drift without disciplined supplier reviews.",
         "Allergen notes live on tickets, not memory.",
         "The pass stays quiet when prep is honest.",
+    ],
+    "pest_control": [
+        "Harborages get photo-mapped before treatment.",
+        "Re-entry times follow label and sector rules.",
+        "Exclusion notes go straight to maintenance.",
+        "Emergency calls get a written plan first.",
     ],
     "cleaning": [
         "Routes redraw when your hours change.",
@@ -5293,7 +6166,7 @@ _GENERIC_ABOUT_SPLITS: tuple[list[str], ...] = (
     [
         "Onboarding for new stakeholders includes a single source of truth — not a scavenger hunt through inboxes.",
         "We rehearse edge cases before go-live when the downside of a miss is high.",
-        "Client access, approvals, and legal review windows are named up front so timelines are honest.",
+        "Client access, approvals, and sign-off windows are named up front so timelines stay honest.",
     ],
 )
 

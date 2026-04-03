@@ -145,7 +145,7 @@ def materialize_site_visuals(
     if isinstance(portfolio, list):
         pdir = img_root / "portfolio"
         pdir.mkdir(parents=True, exist_ok=True)
-        for row in portfolio:
+        for pi, row in enumerate(portfolio):
             if not isinstance(row, dict):
                 continue
             rel = str(row.get("image_src") or "").strip()
@@ -155,13 +155,16 @@ def materialize_site_visuals(
             if dest.is_file():
                 continue
             wrote = False
+            pw = 636 + (pi % 5) * 11
+            ph = 396 + (pi % 7) * 9
+            pseed = f"{dest.stem}|{row.get('title')}|{pi}|{brand_nm}"
             if src == "placeholder":
-                pu = picsum_post_urls(rng, brand_nm, dest.stem, 640, 400)
+                pu = picsum_post_urls(rng, brand_nm, pseed, pw, ph)
                 wrote = bool(pu and _fetch_jpeg(pu[0], dest, timeout=6.0))
                 if not wrote:
-                    wrote = write_placeholder_jpeg(dest, rng, 640, 400)
+                    wrote = write_placeholder_jpeg(dest, rng, pw, ph)
             elif src == "pack" and pack_paths:
-                pf = pick_pack_file(rng, pack_paths, f"portfolio|{brand_nm}|{dest.name}")
+                pf = pick_pack_file(rng, pack_paths, f"portfolio|{brand_nm}|{pseed}")
                 if pf and pf.is_file():
                     try:
                         shutil.copy2(pf, dest)
@@ -175,7 +178,7 @@ def materialize_site_visuals(
                         wrote = True
                         break
             if not wrote:
-                write_placeholder_jpeg(dest, rng, 640, 400)
+                write_placeholder_jpeg(dest, rng, pw, ph)
 
     prods = content.get("products")
     if isinstance(prods, list):
@@ -245,7 +248,7 @@ def materialize_site_visuals(
             initials = "".join(w[0].upper() for w in nm.split() if w)[:2] or "?"
             dest = tdir / _team_photo_filename(i, nm)
             if src == "placeholder":
-                tw, th = rng.choice([(420, 420), (400, 500), (480, 480)])
+                tw, th = (400, 400)
                 seed_t = _seed_part(rng, "team", brand_nm, str(row.get("name")), str(i))
                 tid = 20 + (int(hashlib.sha256(seed_t.encode()).hexdigest(), 16) % 870)
                 url_t = rng.choice(
@@ -276,7 +279,7 @@ def materialize_site_visuals(
                     except OSError:
                         pass
             seed = _seed_part(rng, "team", brand_nm, str(row.get("name")), str(i))
-            tw, th = rng.choice([(400, 400), (380, 480), (420, 420), (360, 450), (300, 300), (350, 350), (440, 550), (320, 400)])
+            tw, th = (400, 400)
             tid = 20 + (int(hashlib.sha256(seed.encode()).hexdigest(), 16) % 870)
             url = rng.choice(
                 [
@@ -394,6 +397,7 @@ def materialize_site_visuals(
     if isinstance(titems, list):
         tdir = img_root / "testimonials"
         tdir.mkdir(parents=True, exist_ok=True)
+        photo_slot = 0
         for i, row in enumerate(titems):
             if not isinstance(row, dict):
                 continue
@@ -401,8 +405,9 @@ def materialize_site_visuals(
                 continue
             nm = str(row.get("name") or "")
             initials = "".join(w[0].upper() for w in nm.split() if w)[:2] or "?"
-            tw, th = rng.choice([(200, 200), (240, 240), (180, 180)])
-            dest = tdir / f"t-{i + 1:02d}.jpg"
+            tw, th = (220, 220)
+            photo_slot += 1
+            dest = tdir / f"t-{photo_slot:02d}.jpg"
             if src == "placeholder":
                 seed_tt = _seed_part(rng, "tphoto", brand_nm, str(row.get("name")), str(i))
                 url_tt = f"https://picsum.photos/seed/{seed_tt}/{tw}/{th}.jpg"

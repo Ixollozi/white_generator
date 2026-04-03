@@ -32,6 +32,15 @@ def pick_register(rng: random.Random) -> Register:
     return rng.choice(["formal", "neutral", "conversational"])
 
 
+def pick_register_for_blog_post(post_index: int, rng: random.Random) -> Register:
+    """Rotate baseline register by post index for stronger tone contrast; sometimes override."""
+    cycle: tuple[Register, ...] = ("conversational", "formal", "neutral")
+    base = cycle[post_index % 3]
+    if rng.random() < 0.52:
+        return base
+    return rng.choice(["formal", "neutral", "conversational"])
+
+
 def prose_humanize_enabled(brand: dict[str, Any] | None, merged: dict[str, Any] | None = None) -> bool:
     if merged and merged.get("prose_humanize") is False:
         return False
@@ -121,6 +130,17 @@ def inject_local_detail(text: str, brand: dict[str, Any] | None, rng: random.Ran
                 ],
             ),
         )
+    elif r < 0.82 and city:
+        bits.append(
+            rng.choice(
+                [
+                    f" In {city}, elevator timing still decides whether the first visit runs long.",
+                    " Side-street parking and a missing suite sign ate ten minutes on a route last week — normal noise.",
+                    " Lobby desks sometimes want a name on a sticky note; we build that into the arrival script.",
+                    f" Around {city}, crews text photos of the door placard so dispatch matches the right unit.",
+                ],
+            ),
+        )
     else:
         return text
     frag = rng.choice(bits)
@@ -198,7 +218,7 @@ def vary_paragraph_shape(paragraphs: list[str], rng: random.Random) -> list[str]
                 if len(a) > 40 and len(b) > 40:
                     out = out[:i] + [a.strip() + ".", b.strip().lstrip()] + out[i + 1 :]
                     break
-    if rng.random() < 0.28 and len(out) >= 2:
+    if rng.random() < 0.41 and len(out) >= 2:
         punches = [
             "Worth saying once.",
             "That part matters.",
@@ -209,6 +229,18 @@ def vary_paragraph_shape(paragraphs: list[str], rng: random.Random) -> list[str]
             "Same drill.",
             "Still applies.",
             "Ask first.",
+            "Rarely.",
+            "Depends.",
+            "Maybe.",
+            "Same Tuesday.",
+            "Fine print.",
+            "Not always.",
+            "Same thread.",
+            "Same window.",
+            "Still.",
+            "If unclear, ask.",
+            "No drama.",
+            "Check twice.",
         ]
         ins = rng.randint(1, max(1, len(out) - 1))
         out.insert(ins, rng.choice(punches))
@@ -253,15 +285,17 @@ def apply_conversational_leadin(
 
 def apply_micro_imperfections(text: str, rng: random.Random) -> str:
     """Light contractions / speech-like comma — optional, trust-sensitive."""
-    if rng.random() > 0.35:
+    if rng.random() > 0.28:
         return text
     t = text
-    if rng.random() < 0.5:
+    if rng.random() < 0.58:
         t = re.sub(r"\bWe have\b", "We've", t, count=1)
         t = re.sub(r"\bIt is\b", "It's", t, count=1)
         t = re.sub(r"\bThat is\b", "That's", t, count=1)
         t = re.sub(r"\bYou will\b", "You'll", t, count=1)
-    if rng.random() < 0.22 and "," in t:
+        t = re.sub(r"\bDo not\b", "Don't", t, count=1)
+        t = re.sub(r"\bDoes not\b", "Doesn't", t, count=1)
+    if rng.random() < 0.28 and "," in t:
         # insert a single comma before a short clause (very conservative)
         m = re.search(r"^(We|You|I) (\w+ \w+)", t)
         if m and m.end() < len(t) - 10:
@@ -383,8 +417,15 @@ def massage_first_html_paragraph(
     paras[0] = wrap_paragraph_html(plain)
 
 
-def maybe_prepend_hedge(text: str, rng: random.Random, *, strength: float = 0.55) -> str:
-    if rng.random() > 0.14 * (0.7 + strength):
+def maybe_prepend_hedge(
+    text: str,
+    rng: random.Random,
+    *,
+    strength: float = 0.55,
+    prose_boost: float = 1.0,
+) -> str:
+    apply_p = min(0.92, 0.14 * (0.7 + strength) * max(0.5, prose_boost))
+    if rng.random() > apply_p:
         return text
     t = text.strip()
     if not t or "<" in t:
@@ -402,8 +443,9 @@ def maybe_prepend_hedge(text: str, rng: random.Random, *, strength: float = 0.55
     return hedge + (t[0].lower() + t[1:] if len(t) > 1 else t)
 
 
-def append_numeric_texture_clause(text: str, rng: random.Random) -> str:
-    if rng.random() > 0.2:
+def append_numeric_texture_clause(text: str, rng: random.Random, *, prose_boost: float = 1.0) -> str:
+    apply_p = min(0.52, 0.2 * max(0.65, prose_boost))
+    if rng.random() > apply_p:
         return text
     t = text.rstrip()
     if not t or "<" in t:
@@ -415,6 +457,8 @@ def append_numeric_texture_clause(text: str, rng: random.Random) -> str:
             " We’ve seen a roughly 40% drop in repeat calls once the checklist sticks.",
             " Same-day still happens — not always in the first 90 minutes.",
             " A ten-minute phone save beats a two-hour reschedule.",
+            " Most crews clear the intake in under 45 minutes when the lobby is quiet.",
+            " We plan for a three-day tail when permits are involved.",
         ],
     )
     if frag.strip() in t:
@@ -423,8 +467,15 @@ def append_numeric_texture_clause(text: str, rng: random.Random) -> str:
     return f"{t}{join}{frag}"
 
 
-def append_mundane_delay_clause(text: str, brand: dict[str, Any] | None, rng: random.Random) -> str:
-    if rng.random() > 0.16:
+def append_mundane_delay_clause(
+    text: str,
+    brand: dict[str, Any] | None,
+    rng: random.Random,
+    *,
+    prose_boost: float = 1.0,
+) -> str:
+    apply_p = min(0.45, 0.16 * max(0.65, prose_boost))
+    if rng.random() > apply_p:
         return text
     t = text.rstrip()
     if not t or "<" in t:
@@ -442,6 +493,44 @@ def append_mundane_delay_clause(text: str, brand: dict[str, Any] | None, rng: ra
     )
     join = "" if t.endswith((".", "!", "?")) else "."
     return f"{t}{join}{frag}"
+
+
+def split_first_sentence_paragraph(plain: str) -> tuple[str, str] | None:
+    """If first sentence is short and remainder is long, return (first, rest) for two <p> blocks."""
+    t = (plain or "").strip()
+    if len(t) < 160:
+        return None
+    m = re.match(r"^([^.!?]+[.!?])(\s+)(.+)$", t, re.DOTALL)
+    if not m:
+        return None
+    first, rest = m.group(1).strip(), m.group(3).strip()
+    if not first or not rest:
+        return None
+    if len(first) > 52 or len(first) < 8:
+        return None
+    if len(rest) < 80:
+        return None
+    return first, rest
+
+
+def maybe_drop_corporate_opener(plain: str, register: str, rng: random.Random) -> str:
+    """Sometimes drop leading 'We ' for a direct start or a concrete subject (conversational/neutral)."""
+    if register == "formal":
+        return plain
+    t = plain.strip()
+    if not t.lower().startswith("we "):
+        return t
+    p = 0.24 if register == "conversational" else 0.12
+    if rng.random() > p:
+        return t
+    rest = t[3:].strip()
+    if not rest:
+        return t
+    if rng.random() < 0.55:
+        return rest[0].upper() + rest[1:] if len(rest) > 1 else rest.upper()
+    subj = rng.choice(["The crew ", "Our desk ", "The team ", "Field side "])
+    tail = rest[0].lower() + rest[1:] if len(rest) > 1 else rest.lower()
+    return subj + tail
 
 
 def vary_section_plain_shape(
@@ -482,6 +571,31 @@ _ULTRA_SHORT_PUNCHES: tuple[str, ...] = (
     "We mean it.",
     "Check the date.",
     "Still true.",
+    "Depends.",
+    "Maybe not.",
+    "Same drill.",
+    "If unclear, pause.",
+    "Not today.",
+    "Fine.",
+    "Rough morning.",
+    "Still sorting it.",
+)
+
+_FORMAL_DRY_PUNCHES: tuple[str, ...] = (
+    "Proceed accordingly.",
+    "Document the decision.",
+    "No further action required.",
+    "Retain records per policy.",
+    "Standard sequence applies.",
+)
+
+_MINI_CASE_LINES: tuple[str, ...] = (
+    "Three callbacks last Tuesday — all access issues.",
+    "One building held us twenty minutes on a slow elevator.",
+    "Two desks wanted a different name on the work order.",
+    "A missing suite sign burned the first ten minutes.",
+    "Same client, fourth quarter, same parking headache.",
+    "Friday afternoon: one van down, routes shuffled.",
 )
 
 _LOW_KEY_FINALS: tuple[str, ...] = (
@@ -491,6 +605,33 @@ _LOW_KEY_FINALS: tuple[str, ...] = (
     "Stopping here — the rest is situational.",
     "If this ages badly, check the byline date.",
 )
+
+_LOW_KEY_FINALS_FORMAL: tuple[str, ...] = (
+    "Further detail is available on request.",
+    "This note is accurate as of the publication date.",
+    "Exceptions are documented in the service appendix.",
+)
+
+_LOW_KEY_FINALS_CHAT: tuple[str, ...] = (
+    "That's the messy version.",
+    "Still figuring if we need a part two.",
+    "Anyway — enough for one scroll.",
+    "You might disagree; that's fine.",
+)
+
+
+def _pick_ultra_punch(register: str, rng: random.Random) -> str:
+    if register == "formal" and rng.random() < 0.62:
+        return rng.choice(_FORMAL_DRY_PUNCHES)
+    return rng.choice(_ULTRA_SHORT_PUNCHES)
+
+
+def _pick_low_key_final(register: str, rng: random.Random) -> str:
+    if register == "formal" and rng.random() < 0.55:
+        return rng.choice(_LOW_KEY_FINALS_FORMAL)
+    if register == "conversational" and rng.random() < 0.5:
+        return rng.choice(_LOW_KEY_FINALS_CHAT)
+    return rng.choice(_LOW_KEY_FINALS)
 
 
 def apply_blog_post_depth_pass(
@@ -505,6 +646,7 @@ def apply_blog_post_depth_pass(
     """Extra variation across sections: shape, hedges, punches, mundane/numeric clauses, soft endings."""
     if not sections:
         return
+    prose_boost = 0.85 + 0.35 * chatty_strength
     nsec = len(sections)
     idxs = list(range(nsec))
     rng.shuffle(idxs)
@@ -525,7 +667,7 @@ def apply_blog_post_depth_pass(
             if plain and 35 < len(plain) < 420:
                 candidates.append((si, pi))
     rng.shuffle(candidates)
-    n_touch = rng.randint(1, min(4, max(1, len(candidates))))
+    n_touch = rng.randint(1, min(5, max(1, len(candidates))))
     formal = register == "formal"
     for si, pi in candidates[:n_touch]:
         paras = sections[si]["paragraphs_html"]
@@ -534,23 +676,47 @@ def apply_blog_post_depth_pass(
         if not plain:
             continue
         if not formal and rng.random() < 0.34 * chatty_strength:
-            plain = maybe_prepend_hedge(plain, rng, strength=chatty_strength)
+            plain = maybe_prepend_hedge(plain, rng, strength=chatty_strength, prose_boost=prose_boost)
         if rng.random() < 0.22 * chatty_strength:
-            plain = append_numeric_texture_clause(plain, rng)
+            plain = append_numeric_texture_clause(plain, rng, prose_boost=prose_boost)
         if not formal and rng.random() < 0.2 * chatty_strength:
-            plain = append_mundane_delay_clause(plain, brand, rng)
+            plain = append_mundane_delay_clause(plain, brand, rng, prose_boost=prose_boost)
         if register == "conversational" and pi > 0 and rng.random() < 0.18 * chatty_strength:
             plain = apply_conversational_leadin(plain, rng, chatty_strength=chatty_strength)
         if micro and rng.random() < 0.25:
             plain = apply_micro_imperfections(plain, rng)
-        paras[pi] = wrap_paragraph_html(plain)
+        if not formal and rng.random() < 0.17 * chatty_strength:
+            plain = maybe_drop_corporate_opener(plain, register, rng)
+
+        split_pair = split_first_sentence_paragraph(plain)
+        split_prob = (0.07 if formal else 0.19) * (0.65 + chatty_strength)
+        if split_pair and rng.random() < split_prob:
+            a, b = split_pair
+            paras[pi] = wrap_paragraph_html(a)
+            paras.insert(pi + 1, wrap_paragraph_html(b))
+        else:
+            paras[pi] = wrap_paragraph_html(plain)
 
     if rng.random() < 0.38 * chatty_strength:
         si = rng.randrange(nsec)
         paras = sections[si].get("paragraphs_html")
         if isinstance(paras, list) and paras:
             ins = rng.randint(0, len(paras))
-            paras.insert(ins, wrap_paragraph_html(rng.choice(_ULTRA_SHORT_PUNCHES)))
+            paras.insert(ins, wrap_paragraph_html(_pick_ultra_punch(register, rng)))
+
+    if rng.random() < 0.26 * chatty_strength:
+        si = rng.randrange(nsec)
+        paras = sections[si].get("paragraphs_html")
+        if isinstance(paras, list) and paras:
+            ins = rng.randint(0, len(paras))
+            paras.insert(ins, wrap_paragraph_html(_pick_ultra_punch(register, rng)))
+
+    if rng.random() < 0.14 * chatty_strength:
+        si = rng.randrange(nsec)
+        paras = sections[si].get("paragraphs_html")
+        if isinstance(paras, list) and paras:
+            ins = rng.randint(0, len(paras))
+            paras.insert(ins, wrap_paragraph_html(rng.choice(_MINI_CASE_LINES)))
 
     if rng.random() < 0.24 * (0.6 + chatty_strength):
         si = rng.randrange(nsec)
@@ -558,11 +724,17 @@ def apply_blog_post_depth_pass(
         if isinstance(paras, list) and len(paras) >= 2:
             pi = rng.randint(0, len(paras) - 2)
             p0 = strip_inner_paragraph_text(paras[pi]) or ""
-            p1 = strip_inner_paragraph_text(paras[pi + 1]) or ""
             w0 = p0.split()[:2]
             if len(w0) >= 1 and rng.random() < 0.5:
                 stub = f"{w0[0]} — same thread."
                 paras.insert(pi + 1, wrap_paragraph_html(stub))
+            elif rng.random() < 0.55:
+                paras.insert(
+                    pi + 1,
+                    wrap_paragraph_html(
+                        rng.choice(["Same window. Same contact.", "Same thread. Same follow-up."]),
+                    ),
+                )
 
     last_sec = sections[-1].get("paragraphs_html")
     if isinstance(last_sec, list) and last_sec and rng.random() < 0.22 * chatty_strength:
@@ -570,7 +742,7 @@ def apply_blog_post_depth_pass(
         if isinstance(last_block, str):
             plain = strip_inner_paragraph_text(last_block)
             if plain and len(plain) > 120 and rng.random() < 0.55:
-                last_sec[-1] = wrap_paragraph_html(rng.choice(_LOW_KEY_FINALS))
+                last_sec[-1] = wrap_paragraph_html(_pick_low_key_final(register, rng))
 
 
 def news_local_anchor_sentence(city: str, brand: dict[str, Any] | None, rng: random.Random) -> str:

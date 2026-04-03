@@ -76,6 +76,7 @@ def _organization_ld(base: str, ctx: dict[str, Any]) -> str:
     country = (ctx.get("country") or "").strip()
     address_mode = str(ctx.get("address_mode") or "").strip().lower()
     primary_type = _schema_org_type(ctx)
+    vid = str(ctx.get("vertical_id") or "").strip()
     payload: dict[str, Any] = {
         "@context": "https://schema.org",
         "@type": primary_type,
@@ -83,7 +84,7 @@ def _organization_ld(base: str, ctx: dict[str, Any]) -> str:
         "url": base + "/",
         "description": desc,
     }
-    if str(ctx.get("vertical_id") or "").strip() == "hvac" and primary_type == "LocalBusiness":
+    if vid == "hvac" and primary_type == "LocalBusiness":
         payload["additionalType"] = "https://schema.org/HomeAndConstructionBusiness"
     if email:
         payload["email"] = email
@@ -104,7 +105,10 @@ def _organization_ld(base: str, ctx: dict[str, Any]) -> str:
             addr_obj["addressCountry"] = country
         payload["address"] = addr_obj
     hw = (ctx.get("hours_weekday") or "").strip()
-    if hw:
+    hd = (ctx.get("hours_display") or "").strip()
+    if vid == "cafe_restaurant" and hd:
+        payload["openingHours"] = hd
+    elif hw:
         # Prefer structured hours for better schema validation.
         # Input expected like: "Mon–Fri 7:00–18:00 (dispatch)" or "Mon-Fri 09:00-18:00".
         parsed = _opening_hours_spec(hw)
@@ -137,12 +141,15 @@ def _organization_ld(base: str, ctx: dict[str, Any]) -> str:
             "latitude": str(geo_lat),
             "longitude": str(geo_lng),
         }
-    # Area served
+    # Area served (stable per-site order so batches don’t share identical JSON-LD ordering)
     service_zones = ctx.get("service_area_zones")
     if isinstance(service_zones, list) and service_zones:
-        payload["areaServed"] = [
-            {"@type": "City", "name": z} for z in service_zones
-        ]
+        ld_seed = int(hashlib.sha256(f"{brand}|{city}|{base}".encode("utf-8")).hexdigest(), 16)
+        zones_sorted = sorted(
+            service_zones,
+            key=lambda z: hashlib.sha256(f"{ld_seed}|{z}".encode("utf-8")).hexdigest(),
+        )
+        payload["areaServed"] = [{"@type": "City", "name": z} for z in zones_sorted]
     elif address_mode == "catalog" and city:
         payload["areaServed"] = {"@type": "City", "name": city}
     elif address_mode in {"fictional", "fake"}:
@@ -158,7 +165,11 @@ def _organization_ld(base: str, ctx: dict[str, Any]) -> str:
     # AggregateRating for local businesses with testimonials
     review_count = ctx.get("review_count")
     review_avg = ctx.get("review_avg")
-    if review_count and review_avg:
+    if (
+        ctx.get("schema_publish_aggregate_rating", True)
+        and review_count
+        and review_avg
+    ):
         payload["aggregateRating"] = {
             "@type": "AggregateRating",
             "ratingValue": str(review_avg),
@@ -172,7 +183,6 @@ def _organization_ld(base: str, ctx: dict[str, Any]) -> str:
         same.append(tiktok)
         payload["sameAs"] = same
     # acceptsReservations for restaurants
-    vid = (ctx.get("vertical_id") or "").strip()
     if vid == "cafe_restaurant":
         payload["acceptsReservations"] = "True"
         payload["servesCuisine"] = ctx.get("cuisine_type") or "Contemporary"
@@ -205,6 +215,34 @@ def _organization_ld(base: str, ctx: dict[str, Any]) -> str:
                 "name": f"{brand} — service catalog",
                 "itemListElement": offers,
             }
+    ka_generic = [
+        "Local customer service",
+        "Appointment scheduling",
+        "Project delivery",
+        "Quality standards",
+    ]
+    ka_by_vid: dict[str, list[str]] = {
+        "cafe_restaurant": [
+            "Restaurant reservations",
+            "Seasonal menus",
+            "Food preparation",
+            "Hospitality",
+        ],
+        "cleaning": ["Commercial cleaning", "Floor care", "Sanitation", "Route scheduling"],
+        "news": ["Editorial standards", "Fact checking", "Local reporting", "Corrections"],
+        "legal": ["Legal intake", "Document review", "Risk disclosure", "Client confidentiality"],
+        "accounting": ["Bookkeeping", "Tax compliance", "Payroll remittance", "Financial reporting"],
+    }
+    pool_ka = ka_by_vid.get(vid, ka_generic)
+    h_ka = int(hashlib.sha256(f"{brand}|{city}|{base}|knowsAbout".encode("utf-8")).hexdigest(), 16)
+    order_ix = sorted(
+        range(len(pool_ka)),
+        key=lambda i: hashlib.sha256(f"{h_ka}|{i}".encode("utf-8")).hexdigest(),
+    )
+    n_ka = 2 + (h_ka % 3)
+    knows_list = [pool_ka[j] for j in order_ix[: min(n_ka, len(pool_ka))]]
+    if knows_list:
+        payload["knowsAbout"] = knows_list
     return json.dumps(payload, ensure_ascii=False)
 
 
@@ -346,6 +384,7 @@ def apply_seo(
     blog_title_val = _title(blog_label, city)
     if vid == "news":
         blog_title_val = f"{blog_label} | Latest reporting{f' — {city}' if city else ''} | {brand}"
+    ind_page_head = str(ctx.get("industries_page_header") or "Industries we serve").strip() or "Industries we serve"
     titles = {
         "index": _idx_title(),
         "about": _title("About", city),
@@ -360,7 +399,7 @@ def apply_seo(
         "portfolio": _title("Portfolio", city),
         "case_studies": _title("Case studies", city),
         "careers": _title("Careers", city),
-        "industries": _title("Industries we serve", city),
+        "industries": _title(ind_page_head, city),
         "resources": _title(res_head, city),
         "service_areas": _title("Service areas", city),
     }
@@ -390,7 +429,10 @@ def apply_seo(
         "portfolio": f"Selected work and project highlights from {brand}{f' serving {city}' if city else ''}.",
         "case_studies": f"Client outcomes, challenges, and solutions documented by {brand}{f' in {city}' if city else ''}.",
         "careers": f"Open roles and how we hire at {brand}{f' ({city})' if city else ''}.",
-        "industries": f"Sectors and client types {brand} supports{f' around {city}' if city else ''}.",
+        "industries": (
+            (str(ctx.get("industries_page_intro") or "").strip()[:320] or None)
+            or f"Sectors and client types {brand} supports{f' around {city}' if city else ''}."
+        ),
         "resources": f"Guides, downloads, and helpful links from {brand}.",
         "service_areas": f"Neighborhoods and districts {brand} serves{f' near {city}' if city else ''}.",
     }
@@ -407,8 +449,15 @@ def apply_seo(
             return t
         return (t[: max(80, cap - 1)].rsplit(" ", 1)[0] + "…") if len(t) > cap else t[:cap]
 
+    _prof_industries_file = frozenset({"legal", "consulting", "medical", "dental", "accounting"})
+
     for key in pages:
-        fname = "index.php" if key == "index" else f"{key}.{page_extension}"
+        if key == "index":
+            fname = f"index.{page_extension}"
+        elif key == "industries" and vid in _prof_industries_file:
+            fname = f"practice-areas.{page_extension}"
+        else:
+            fname = f"{key}.{page_extension}"
         urls.append(f"/{fname}")
         title = titles.get(key, f"{key.replace('_', ' ').title()} — {brand}")
         desc = _trim_desc(str(descriptions.get(key, tagline)), key)

@@ -15,7 +15,7 @@ from core.prose_vary import (
     apply_inject_to_random_html_paragraphs,
     massage_first_html_paragraph,
     news_local_anchor_sentence,
-    pick_register,
+    pick_register_for_blog_post,
     prose_chatty_strength,
     prose_humanize_enabled,
     prose_micro_imperfections_enabled,
@@ -415,7 +415,7 @@ def _strip_trailing_parenthetical_title(title: str) -> str:
     return s[: start - 1].strip() or s
 
 
-def _short_hash_token(key: str, *, n: int = 5) -> str:
+def _short_hash_token(key: str, *, n: int = 7) -> str:
     return hashlib.sha256(key.encode("utf-8")).hexdigest()[:n]
 
 
@@ -426,7 +426,7 @@ def _unique_slug_seen(base: str, seen: set[str], *, max_len: int = 72) -> str:
     candidate = base
     while candidate in seen:
         n += 1
-        suffix = _short_hash_token(f"{base}|{n}", n=5)
+        suffix = _short_hash_token(f"{base}|{n}")
         candidate = _slugify_ascii(f"{base}-{suffix}", max_len=max_len).strip("-") or suffix
     return candidate
 
@@ -1030,7 +1030,7 @@ def enrich_news_vertical_content(
         if article_kind not in NEWS_ARTICLE_KINDS:
             article_kind = NEWS_ARTICLE_KINDS[i % len(NEWS_ARTICLE_KINDS)]
 
-        post_register = pick_register(rng)
+        post_register = pick_register_for_blog_post(i, rng)
 
         short_band = rng.random() < 0.47
         if article_kind == "news":

@@ -11,6 +11,21 @@ from typing import Any, Callable
 
 from generators.brand_generator import generate_brand
 from generators.content_generator import build_service_area_page_html, fill_content, load_verticals, pick_vertical
+
+# No service-area-{zone} microsites (trades pattern) for these verticals.
+_VERTICALS_NO_SERVICE_AREA_PAGES: frozenset[str] = frozenset(
+    {
+        "news",
+        "clothing",
+        "cafe_restaurant",
+        "cleaning",
+        "legal",
+        "consulting",
+        "medical",
+        "dental",
+        "accounting",
+    },
+)
 from integrations.tracking import build_tracking_snippet
 
 from core.build_manifest import write_build_manifest
@@ -83,18 +98,58 @@ def _adjust_nav_for_structure(
     nav: list[dict[str, str]],
     page_keys: list[str],
     page_ext: str,
+    vertical_id: str = "",
 ) -> None:
     ext = page_ext.strip() or "php"
+    vid = (vertical_id or "").strip()
     for item in nav:
         href = str(item.get("href") or "")
         if href == f"services.{ext}" and "services" not in page_keys and "industries" in page_keys:
+            if vid in ("cafe_restaurant", "cleaning"):
+                continue
             item["href"] = f"industries.{ext}"
-            if str(item.get("label") or "").strip().lower() in ("services", "what we do"):
+            lb_low = str(item.get("label") or "").strip().lower()
+            if lb_low in ("services", "what we do"):
                 item["label"] = "Industries"
+            elif lb_low == "menu":
+                item["label"] = "Menu"
         if href == f"blog.{ext}" and "blog" not in page_keys and "resources" in page_keys:
             item["href"] = f"resources.{ext}"
             if str(item.get("label") or "").strip().lower() == "blog":
                 item["label"] = "Resources"
+
+
+def _normalize_nav_href(href: str) -> str:
+    h = str(href or "").strip()
+    if h.startswith("./"):
+        h = h[2:]
+    return h.lower()
+
+
+def _sync_nav_hrefs_from_seo(
+    nav: list[dict[str, Any]],
+    seo: dict[str, Any],
+    page_ext: str,
+    page_keys: list[str],
+) -> None:
+    """Align nav hrefs with apply_seo paths (e.g. industries → practice-areas for law firms)."""
+    pages = (seo or {}).get("pages")
+    if not isinstance(pages, dict):
+        return
+    ext = (page_ext or "php").strip() or "php"
+    for pk in page_keys:
+        meta = pages.get(pk)
+        if not isinstance(meta, dict):
+            continue
+        want = str(meta.get("path") or "").strip()
+        if not want:
+            continue
+        legacy = f"index.{ext}" if pk == "index" else f"{pk}.{ext}"
+        if want == legacy:
+            continue
+        for item in nav:
+            if isinstance(item, dict) and str(item.get("href") or "").strip() == legacy:
+                item["href"] = want
 
 
 def _dedupe_nav_items_by_href(nav: list[dict[str, str]]) -> None:
@@ -105,14 +160,15 @@ def _dedupe_nav_items_by_href(nav: list[dict[str, str]]) -> None:
     while i < len(nav):
         h = str(nav[i].get("href") or "").strip()
         lb = str(nav[i].get("label") or "").strip()
-        pair = (h.lower(), lb.lower())
-        if not h:
+        hn = _normalize_nav_href(h)
+        pair = (hn, lb.lower())
+        if not hn:
             nav.pop(i)
             continue
-        if h in seen_h or pair in seen_pair:
+        if hn in seen_h or pair in seen_pair:
             nav.pop(i)
             continue
-        seen_h.add(h)
+        seen_h.add(hn)
         seen_pair.add(pair)
         i += 1
 
@@ -146,7 +202,10 @@ def _augment_nav_items(
         ("resources", "Resources"),
         ("service_areas", "Service areas"),
     ]
+    vid_opt = (vertical_id or "").strip()
     for key, label in _optional_pages:
+        if key == "service_areas" and vid_opt in ("cafe_restaurant", "cleaning"):
+            continue
         if key in page_keys:
             h = f"{key}.{page_ext}"
             if h not in hrefs:
@@ -282,6 +341,22 @@ def generate_one_site(
         page_keys = [k for k in page_keys if k not in ("shop", "cart", "checkout")]
         manifest_pages = {k: v for k, v in (manifest.get("pages") or {}).items() if k in page_keys}
         manifest_for_build = {**manifest, "pages": manifest_pages}
+    if vid_gate == "cafe_restaurant":
+        page_keys = [k for k in page_keys if k not in ("industries", "service_areas")]
+        if "services" not in page_keys and "services" in all_page_keys:
+            page_keys.append("services")
+        manifest_pages = {k: v for k, v in (manifest.get("pages") or {}).items() if k in page_keys}
+        manifest_for_build = {**manifest, "pages": manifest_pages}
+    if vid_gate == "cleaning":
+        page_keys = [k for k in page_keys if k not in ("industries", "service_areas")]
+        if "services" not in page_keys and "services" in all_page_keys:
+            page_keys.append("services")
+        manifest_pages = {k: v for k, v in (manifest.get("pages") or {}).items() if k in page_keys}
+        manifest_for_build = {**manifest, "pages": manifest_pages}
+    if vid_gate in ("legal", "consulting", "medical", "dental", "accounting"):
+        page_keys = [k for k in page_keys if k != "service_areas"]
+        manifest_pages = {k: v for k, v in (manifest.get("pages") or {}).items() if k in page_keys}
+        manifest_for_build = {**manifest, "pages": manifest_pages}
     ctx.meta["page_keys"] = list(page_keys)
     theme_pack = load_theme_pack(project_root, str(vdef.get("id") or ""))
     nav_built = _augment_nav_items(
@@ -290,7 +365,7 @@ def generate_one_site(
         page_ext,
         str(vdef.get("id") or ""),
     )
-    _adjust_nav_for_structure(nav_built, page_keys, page_ext)
+    _adjust_nav_for_structure(nav_built, page_keys, page_ext, vertical_id=str(vdef.get("id") or ""))
     _dedupe_nav_items_by_href(nav_built)
     ctx.meta["nav_items"] = nav_built
     ctx.meta["index_slot_extras"] = theme_pack["index_extras"]
@@ -344,6 +419,8 @@ def generate_one_site(
             news_options=news_opts,
         ),
     )
+    if "portfolio" not in page_keys:
+        ctx.content["portfolio_items"] = []
     validate_site_coherence(ctx.brand, ctx.content, strict=bool(cfg.get("coherence_strict")))
     _img_cfg = cfg.get("images") if isinstance(cfg.get("images"), dict) else {}
     materialize_gallery_images(site_dir, ctx.content, rng, ctx.brand, images_cfg=_img_cfg)
@@ -368,6 +445,7 @@ def generate_one_site(
     junk_keys_cfg = list(noise_cfg.get("junk_pages") or [])
     seo_block = apply_seo(flat_for_seo, page_keys, page_ext, effective_base)
     ctx.seo.update(seo_block)
+    _sync_nav_hrefs_from_seo(ctx.meta.get("nav_items") or [], ctx.seo, page_ext, page_keys)
     # Build policy links (footer) and guarantee those pages are generated.
     vid = str(ctx.content.get("vertical_id") or "").strip()
 
@@ -504,6 +582,31 @@ def generate_one_site(
                 raise ValueError(f"Duplicate blog posts detected: dup_anchors={dup_a} dup_titles={dup_t}")
 
     strict = bool(cfg.get("strict_components"))
+    theme = str(cfg.get("theme") or "default")
+    copy_theme_assets(cfg["assets_dir"], theme, site_dir)
+    copy_template_static(template_dir, site_dir)
+    _write_brand_site_extras(site_dir, ctx.brand)
+
+    ident_noise = str(ctx.brand.get("generation_identity") or "")
+    _asset_salt = (
+        f"{build_id}|{ctx.meta.get('site_index', 0)}|{ctx.brand.get('city') or ''}|{ctx.brand.get('brand_name') or ''}"
+    )
+    noise_files_pre = write_noise_assets(
+        site_dir,
+        rng,
+        noise_cfg,
+        str(ctx.content.get("vertical_id") or ""),
+        site_identity=ident_noise,
+        asset_salt=_asset_salt,
+    )
+    css_paths = [f for f in noise_files_pre if f.endswith(".css")]
+    if len(css_paths) >= 3:
+        ctx.meta["core_stylesheet_href"] = css_paths[-3]
+        ctx.meta["layout_stylesheet_href"] = css_paths[-2]
+        ctx.meta["vendor_stylesheet_href"] = css_paths[-1]
+        ctx.meta["stylesheet_extras"] = css_paths[:-3]
+    ctx.noise["generated_files"] = list(noise_files_pre)
+
     html_by_page = compose_pages(
         ctx,
         rng,
@@ -519,19 +622,12 @@ def generate_one_site(
         html_by_page = {
             k: apply_html_noise(v, rng, noise_cfg, noise_tok) for k, v in html_by_page.items()
         }
-        # Guardrails: randomization must not break required behavior hooks.
         if bool(noise_cfg.get("randomize_ids")):
             required_ids = {"cookie-consent", "cookie-ok"}
             for key, html in html_by_page.items():
                 missing = [rid for rid in required_ids if f'id="{rid}"' not in html]
                 if missing:
-                    # In strict environments we'd raise; for now, fail-fast to avoid shipping broken UX.
                     raise ValueError(f"Noise broke required ids on page={key}: {missing}")
-
-    theme = str(cfg.get("theme") or "default")
-    copy_theme_assets(cfg["assets_dir"], theme, site_dir)
-    copy_template_static(template_dir, site_dir)
-    _write_brand_site_extras(site_dir, ctx.brand)
 
     for key, html in html_by_page.items():
         fname = ctx.seo["pages"][key]["path"]
@@ -754,7 +850,7 @@ def generate_one_site(
     # Service area pages (city/district pages for local SEO)
     service_zones = ctx.brand.get("service_area_zones") or []
     vid_sa = str(ctx.content.get("vertical_id") or "").strip()
-    if service_zones and vid_sa not in ("news", "clothing"):
+    if service_zones and vid_sa not in _VERTICALS_NO_SERVICE_AREA_PAGES:
         env_sa = make_template_env(template_dir)
         layout_tpl_sa = env_sa.get_template("layout.html")
         rv_sa = ctx.render_vars()
@@ -815,9 +911,6 @@ def generate_one_site(
             if noise_apply:
                 sa_html = apply_html_noise(sa_html, rng, noise_cfg, noise_tok)
             (site_dir / sa_fname).write_text(sa_html, encoding="utf-8")
-
-    noise_files = write_noise_assets(site_dir, rng, noise_cfg, str(ctx.content.get("vertical_id") or ""))
-    ctx.noise["generated_files"] = noise_files
 
     # Asset integrity check: referenced gallery files must exist if using local paths.
     for p in site_dir.glob(f"*.{page_ext}"):
@@ -966,25 +1059,67 @@ def generate_one_site(
                 raise ValueError(f"Detected mojibake in {p.name}")
 
     canon404 = f"{effective_base}/404.{page_ext}"
-    not_found_html = render_junk_page(
-        env,
-        "404.html",
-        {
-            **render_vars,
-            "legal_title": "Page not found",
-            "legal_body": "The page you are looking for does not exist or may have moved.",
-            "page_title": f"Page not found — {brand_nm}",
-            "page_description": "The requested URL was not found on this site.",
-            "page_canonical": canon404,
-            "json_ld_organization": ld_json,
-        },
-    )
-    if noise_apply:
-        not_found_html = apply_html_noise(not_found_html, rng, noise_cfg, noise_tok)
+    not_found_vars = {
+        **render_vars,
+        "legal_title": "Page not found",
+        "legal_body": "The page you are looking for does not exist or may have moved.",
+        "page_title": f"Page not found — {brand_nm}",
+        "page_description": "The requested URL was not found on this site.",
+        "page_canonical": canon404,
+        "json_ld_organization": "",
+    }
+    try:
+        not_found_html = render_junk_page(env, "404_min.html", not_found_vars)
+    except Exception:
+        not_found_html = render_junk_page(
+            env,
+            "404.html",
+            {**not_found_vars, "json_ld_organization": ld_json},
+        )
+        if noise_apply:
+            not_found_html = apply_html_noise(not_found_html, rng, noise_cfg, noise_tok)
     (site_dir / f"404.{page_ext}").write_text(not_found_html, encoding="utf-8")
 
+    def _parse_iso_d(s: str) -> date | None:
+        try:
+            return date.fromisoformat(str(s).strip()[:10])
+        except (ValueError, TypeError):
+            return None
+
+    content_dates: list[date] = []
+    _bp = ctx.content.get("blog_posts")
+    if isinstance(_bp, list):
+        for post in _bp:
+            if isinstance(post, dict):
+                d0 = _parse_iso_d(str(post.get("date_iso") or ""))
+                if d0:
+                    content_dates.append(d0)
+    if isinstance(news_posts, list):
+        for post in news_posts:
+            if isinstance(post, dict):
+                d1 = _parse_iso_d(str(post.get("date_iso") or ""))
+                if d1:
+                    content_dates.append(d1)
+    for _yk in ("founded_year",):
+        _rawy = ctx.brand.get(_yk) or ctx.content.get(_yk)
+        try:
+            _yi = int(_rawy)
+            if 1980 <= _yi <= 2035:
+                content_dates.append(date(_yi, 6, 15))
+        except (TypeError, ValueError):
+            pass
+
     today = date.today()
-    lastmod_today = today.isoformat()
+    content_latest = max(content_dates) if content_dates else today
+    content_earliest = min(content_dates) if content_dates else today
+    today_eff = max(today, content_latest)
+    earliest_floor = min(content_earliest, today_eff)
+
+    def _clamp_lm(d: date) -> str:
+        c = max(earliest_floor, min(d, today_eff))
+        return c.isoformat()
+
+    lastmod_today = _clamp_lm(today_eff)
     paths_lm: list[tuple[str, str]] = []
 
     def _offset_days(seed: int, lo: int, hi: int) -> int:
@@ -1004,7 +1139,8 @@ def generate_one_site(
             offs = _offset_days(base_seed, 10, 60)
         else:
             offs = _offset_days(base_seed, 5, 90)
-        lm = (today if offs == 0 else today - timedelta(days=offs)).isoformat()
+        raw_lm = today_eff if offs == 0 else today_eff - timedelta(days=offs)
+        lm = _clamp_lm(raw_lm)
         paths_lm.append((path, lm))
 
     for junk in junk_keys:
@@ -1012,7 +1148,8 @@ def generate_one_site(
         path = "/" + meta["path"]
         base_seed = abs(hash(f"{build_id}|{junk}"))
         offs = _offset_days(base_seed, 20, 180)
-        lm = (today if offs == 0 else today - timedelta(days=offs)).isoformat()
+        raw_lm = today_eff if offs == 0 else today_eff - timedelta(days=offs)
+        lm = _clamp_lm(raw_lm)
         paths_lm.append((path, lm))
     if str(ctx.content.get("vertical_id") or "") == "news" and isinstance(news_posts, list):
         for post in news_posts:
@@ -1024,7 +1161,10 @@ def generate_one_site(
             sm_key = f"article-{an}"
             pg = (ctx.seo.get("pages") or {}).get(sm_key) or {}
             if pg.get("path"):
-                paths_lm.append((f"/{pg['path']}", str(post.get("date_iso") or lastmod_today)[:10]))
+                pd = _parse_iso_d(str(post.get("date_iso") or ""))
+                paths_lm.append(
+                    (f"/{pg['path']}", _clamp_lm(pd) if pd else lastmod_today),
+                )
         ap = (ctx.seo.get("pages") or {}).get("authors") or {}
         if ap.get("path"):
             paths_lm.append((f"/{ap['path']}", lastmod_today))
@@ -1040,7 +1180,10 @@ def generate_one_site(
                 sm_key = f"post-{an}"
                 pg = (ctx.seo.get("pages") or {}).get(sm_key) or {}
                 if pg.get("path"):
-                    paths_lm.append((f"/{pg['path']}", str(post.get("date_iso") or lastmod_today)[:10]))
+                    pd = _parse_iso_d(str(post.get("date_iso") or ""))
+                    paths_lm.append(
+                        (f"/{pg['path']}", _clamp_lm(pd) if pd else lastmod_today),
+                    )
 
     # Clothing: shop/cart/checkout only (product details are on shop#p-{slug})
     if str(ctx.content.get("vertical_id") or "") == "clothing":
@@ -1064,11 +1207,11 @@ def generate_one_site(
             if pg.get("path"):
                 base_seed = abs(hash(f"{build_id}|cs|{slug}"))
                 offs = _offset_days(base_seed, 8, 120)
-                lm = (today if offs == 0 else today - timedelta(days=offs)).isoformat()
-                paths_lm.append((f"/{pg['path']}", lm))
+                raw_lm = today_eff if offs == 0 else today_eff - timedelta(days=offs)
+                paths_lm.append((f"/{pg['path']}", _clamp_lm(raw_lm)))
 
     # Service area pages in sitemap
-    if service_zones and vid_sa not in ("news", "clothing"):
+    if service_zones and vid_sa not in _VERTICALS_NO_SERVICE_AREA_PAGES:
         for zone in service_zones:
             zone_slug = re.sub(r"[^a-z0-9]+", "-", zone.lower()).strip("-")
             sa_key = f"service-area-{zone_slug}"
@@ -1076,8 +1219,8 @@ def generate_one_site(
             if pg.get("path"):
                 base_seed = abs(hash(f"{build_id}|sa|{zone_slug}"))
                 offs = _offset_days(base_seed, 5, 90)
-                lm = (today if offs == 0 else today - timedelta(days=offs)).isoformat()
-                paths_lm.append((f"/{pg['path']}", lm))
+                raw_lm = today_eff if offs == 0 else today_eff - timedelta(days=offs)
+                paths_lm.append((f"/{pg['path']}", _clamp_lm(raw_lm)))
 
     seo_flags = cfg.get("seo") or {}
     if seo_flags.get("generate_sitemap", True):

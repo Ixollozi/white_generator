@@ -19,9 +19,12 @@
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="manifest" href="site.webmanifest">
   <link rel="stylesheet" href="css/style.css">
-  <link rel="stylesheet" href="css/core.css">
-  <link rel="stylesheet" href="css/layout.css">
-  <link rel="stylesheet" href="css/vendor.css">
+  <link rel="stylesheet" href="{{ core_stylesheet_href }}">
+  <link rel="stylesheet" href="{{ layout_stylesheet_href }}">
+  <link rel="stylesheet" href="{{ vendor_stylesheet_href }}">
+  {% for href in stylesheet_extras %}
+  <link rel="stylesheet" href="{{ href }}">
+  {% endfor %}
   <link rel="stylesheet" href="css/reference.css">
   <style>body { font-family: {{ body_font_family | safe }}; } h1,h2,h3 { font-family: {{ heading_font_family | safe }}; }</style>
 </head>

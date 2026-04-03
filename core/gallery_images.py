@@ -10,6 +10,16 @@ from typing import Any
 from core.image_provider import resolve_image_source, write_placeholder_jpeg
 
 
+def _gallery_basename_prefix(vertical_id: str) -> str:
+    """Avoid generic 'venue-*' for professional sites; neutral names elsewhere."""
+    vid = (vertical_id or "").strip()
+    if vid in ("legal", "consulting", "medical", "dental", "accounting"):
+        return "office"
+    if vid in ("cafe_restaurant", "news", "clothing"):
+        return "gallery"
+    return "site"
+
+
 def materialize_gallery_images(
     site_dir: Path,
     content: dict[str, Any],
@@ -27,13 +37,15 @@ def materialize_gallery_images(
     gdir = site_dir / "img" / "gallery"
     gdir.mkdir(parents=True, exist_ok=True)
     brand_nm = str((brand or {}).get("brand_name") or content.get("brand_name") or "site")
+    vid = str(content.get("vertical_id") or "").strip()
+    prefix = _gallery_basename_prefix(vid)
     src = resolve_image_source(images_cfg)
     for i, raw in enumerate(items):
         if not isinstance(raw, dict):
             continue
         cap = str(raw.get("caption") or f"photo-{i + 1}")
         seed = hashlib.sha256(f"{brand_nm}|{i}|{cap}|{rng.random()}".encode()).hexdigest()[:20]
-        dest = gdir / f"venue-{i + 1:02d}.jpg"
+        dest = gdir / f"{prefix}-{i + 1:02d}.jpg"
         w, hg = rng.choice([(900, 600), (880, 600), (960, 640), (1024, 683)])
         ok = False
         if src == "placeholder":

@@ -16,6 +16,8 @@ def currency_iso_for_country(country: str) -> str:
         return "AUD"
     if c == "Singapore":
         return "SGD"
+    if c == "Canada":
+        return "CAD"
     return "USD"
 
 
@@ -36,7 +38,7 @@ def _to_float(num: str, suffix: str | None) -> float | None:
 
 
 # Currency marker + amount + optional k/m suffix (case-insensitive).
-_RE_MONEY = re.compile(r"(?i)(?:[\$€£]|S\$|A\$)\s*([\d,]+(?:\.\d+)?)\s*([km])?\b")
+_RE_MONEY = re.compile(r"(?i)(?:[\$€£]|S\$|A\$|C\$|CA\$)\s*([\d,]+(?:\.\d+)?)\s*([km])?\b")
 
 
 def extract_amounts_from_price_label(label: str) -> list[float]:
@@ -111,6 +113,8 @@ def derive_price_range_and_enrich_offers(
         sym = "A$"
     elif ccy == "SGD":
         sym = "S$"
+    elif ccy == "CAD":
+        sym = "C$"
 
     def _fmt(n: float) -> str:
         if n >= 1000:
@@ -120,7 +124,13 @@ def derive_price_range_and_enrich_offers(
         return f"{sym}{n:.2f}".rstrip("0").rstrip(".")
 
     if abs(hi - lo) < 0.01:
-        pr = f"Typical entry points around {_fmt(lo)}"
+        if vid == "cafe_restaurant":
+            pr = f"Dishes from {_fmt(lo)}"
+        else:
+            pr = f"Typical entry points around {_fmt(lo)}"
     else:
-        pr = f"Services from {_fmt(lo)} to {_fmt(hi)}"
+        if vid == "cafe_restaurant":
+            pr = f"Dishes from {_fmt(lo)} to {_fmt(hi)}"
+        else:
+            pr = f"Services from {_fmt(lo)} to {_fmt(hi)}"
     return pr, ccy

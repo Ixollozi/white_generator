@@ -17,6 +17,10 @@ class BrandOptions(BaseModel):
         default=None,
         description="Optional overrides merged into geo_profile (language, currency_code, topic_seeds, …)",
     )
+    fabricate_social_urls: bool = Field(
+        default=False,
+        description="If true, emit synthetic social profile URLs (default off for authenticity).",
+    )
 
 
 class SeoOptions(BaseModel):

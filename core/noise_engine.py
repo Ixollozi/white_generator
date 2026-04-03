@@ -1,9 +1,19 @@
 from __future__ import annotations
 
+import hashlib
 import random
 import string
 from pathlib import Path
 from typing import Any
+
+
+def _asset_file_tag(site_identity: str, asset_salt: str, part: str, body: str) -> str:
+    """
+    Content-addressed short id (like real bundlers): same bytes + same site salt → same tag;
+    different files → different tags; different sites → different tags. Avoids one global hash on every asset.
+    """
+    raw = f"{site_identity}|{asset_salt}|{part}|{body}"
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:8]
 
 
 def _rand_token(rng: random.Random, n: int = 6) -> str:
@@ -16,6 +26,9 @@ def write_noise_assets(
     rng: random.Random,
     noise_cfg: dict[str, Any],
     vertical_id: str | None = None,
+    *,
+    site_identity: str = "",
+    asset_salt: str = "",
 ) -> list[str]:
     """Create plausible extra css/js files up to configured max. Returns relative paths."""
     css_max = int(noise_cfg.get("extra_css_max") or 0)
@@ -25,10 +38,10 @@ def write_noise_assets(
     js_dir = site_dir / "js"
     css_dir.mkdir(parents=True, exist_ok=True)
     js_dir.mkdir(parents=True, exist_ok=True)
+    sid = str(site_identity or "")
+    asalt = str(asset_salt or "")
 
     for i in range(css_max):
-        name = f"styles-supplement-{i + 1:02d}.css"
-        p = css_dir / name
         tok = _rand_token(rng, 8)
         ghost = _rand_token(rng, 5)
         lines = [
@@ -39,7 +52,11 @@ def write_noise_assets(
             ".sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}",
         ]
         rng.shuffle(lines[1:-1])
-        p.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        body = "\n".join(lines) + "\n"
+        tag = _asset_file_tag(sid, asalt, f"css-extra-{i + 1:02d}", body)
+        name = f"ss-{tag}-{i + 1:02d}.css"
+        p = css_dir / name
+        p.write_text(body, encoding="utf-8")
         written.append(f"css/{name}")
 
     vid = (vertical_id or "").strip()
@@ -98,22 +115,35 @@ def write_noise_assets(
     shuffled_js = list(range(len(js_templates)))
     rng.shuffle(shuffled_js)
     for i in range(min(js_max, len(js_templates))):
-        name = f"app-helpers-{i + 1:02d}.js"
-        p = js_dir / name
         idx = shuffled_js[i]
         used_js_indices.add(idx)
-        p.write_text(
-            js_templates[idx],
-            encoding="utf-8",
-        )
+        body = js_templates[idx]
+        jtag = _asset_file_tag(sid, asalt, f"js-app-{i + 1:02d}", body)
+        name = f"app-{jtag}-{i + 1:02d}.js"
+        p = js_dir / name
+        p.write_text(body, encoding="utf-8")
         written.append(f"js/{name}")
 
-    written.extend(write_layout_css_bundle(site_dir))
+    written.extend(
+        write_layout_css_bundle(
+            site_dir,
+            site_identity=sid,
+            vertical_id=vertical_id,
+            asset_salt=asalt,
+        ),
+    )
     return written
 
 
-def write_layout_css_bundle(site_dir: Path) -> list[str]:
-    """Stable-named secondary stylesheets (read as generic bundles, not random hashes)."""
+def write_layout_css_bundle(
+    site_dir: Path,
+    *,
+    site_identity: str = "",
+    vertical_id: str | None = None,
+    asset_salt: str = "",
+    bundle_tag: str = "",
+) -> list[str]:
+    """Per-site tagged bundle filenames; core/layout/vendor each get a different hash."""
     css_dir = site_dir / "css"
     css_dir.mkdir(parents=True, exist_ok=True)
     # Keep these bundles non-trivial so archives don't look like placeholders.
@@ -151,10 +181,22 @@ def write_layout_css_bundle(site_dir: Path) -> list[str]:
         "/* reserved for third-party css resets/utilities */\n"
         "@supports (text-wrap: balance){h1,h2,h3{text-wrap:balance}}\n"
     )
-    files: list[tuple[str, str]] = [("core.css", core), ("layout.css", layout), ("vendor.css", vendor)]
+    sid_b = str(site_identity or "")
+    asalt_b = str(asset_salt or "")
+    bt = bundle_tag.strip()
+    bundles: list[tuple[str, str, str]] = [
+        ("c", core, "css-core"),
+        ("l", layout, "css-layout"),
+        ("v", vendor, "css-vendor"),
+    ]
     out: list[str] = []
-    for name, body in files:
-        p = css_dir / name
+    for letter, body, part in bundles:
+        if bt:
+            fname = f"{letter}-{bt}.css"
+        else:
+            suf = _asset_file_tag(sid_b, asalt_b, part, body)
+            fname = f"{letter}-{suf}.css"
+        p = css_dir / fname
         p.write_text(body, encoding="utf-8")
-        out.append(f"css/{name}")
+        out.append(f"css/{fname}")
     return out

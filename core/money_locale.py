@@ -13,6 +13,8 @@ def currency_symbol_for_country(country: str) -> str:
         return "A$"
     if c == "Singapore":
         return "S$"
+    if c == "Canada":
+        return "C$"
     return "$"
 
 

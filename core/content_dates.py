@@ -60,7 +60,13 @@ def past_dates_in_window(
     return out
 
 
-def past_dates_spread(rng: random.Random, n: int, *, brand: dict[str, Any] | None = None) -> list[tuple[str, str]]:
+def past_dates_spread(
+    rng: random.Random,
+    n: int,
+    *,
+    brand: dict[str, Any] | None = None,
+    min_span_days: int = 0,
+) -> list[tuple[str, str]]:
     """Long-form blog/news: spread posts between founding (if known) and today (~2.5y window min)."""
     hi = date.today()
     fy = founded_year_int(brand)
@@ -69,6 +75,10 @@ def past_dates_spread(rng: random.Random, n: int, *, brand: dict[str, Any] | Non
     else:
         cy = as_of_year(brand)
         lo = date(min(fy, cy), 1, 1)
+    if min_span_days > 0:
+        earliest = hi - timedelta(days=min_span_days)
+        if lo > earliest:
+            lo = earliest
     return past_dates_in_window(rng, n, lo, hi)
 
 
